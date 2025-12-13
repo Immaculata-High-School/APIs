@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - API Manager</title>
+    <link rel="stylesheet" href="/static/win95.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            padding-bottom: 32px;
+        }
+        .desktop {
+            padding: 8px;
+            min-height: calc(100vh - 32px);
+        }
+        .main-window {
+            max-width: 1000px;
+            margin: 20px auto;
+        }
+        .stats-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .stat-box {
+            flex: 1;
+            padding: 12px;
+            background: var(--win95-input-bg);
+            border: 2px solid;
+            border-color: var(--win95-button-shadow) var(--win95-button-highlight) var(--win95-button-highlight) var(--win95-button-shadow);
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--win95-window-title);
+        }
+        .stat-label {
+            font-size: 10px;
+            color: var(--win95-button-shadow);
+        }
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 16px 0 8px;
+            font-weight: bold;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--win95-button-shadow);
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--win95-input-bg);
+            border: 2px solid;
+            border-color: var(--win95-button-shadow) var(--win95-button-highlight) var(--win95-button-highlight) var(--win95-button-shadow);
+        }
+        .data-table th {
+            background: var(--win95-button-face);
+            padding: 4px 8px;
+            text-align: left;
+            font-weight: normal;
+            border-bottom: 1px solid var(--win95-button-shadow);
+            border-right: 1px solid var(--win95-button-shadow);
+        }
+        .data-table td {
+            padding: 4px 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .data-table tr:hover td {
+            background: var(--win95-selection);
+            color: var(--win95-selection-text);
+        }
+        .code-display {
+            font-family: 'Courier New', monospace;
+            background: #ffffcc;
+            padding: 2px 6px;
+            border: 1px solid #808000;
+        }
+        .btn-row {
+            display: flex;
+            gap: 4px;
+        }
+        .btn-small {
+            padding: 2px 6px;
+            font-size: 10px;
+            min-width: auto;
+        }
+        .form-inline {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-window {
+            width: 320px;
+        }
+        .badge {
+            padding: 1px 6px;
+            font-size: 10px;
+        }
+        .badge-admin {
+            background: #800000;
+            color: white;
+        }
+        .badge-super {
+            background: #800080;
+            color: white;
+        }
+        .badge-user {
+            background: var(--win95-window-title);
+            color: white;
+        }
+        .badge-active {
+            background: #008000;
+            color: white;
+        }
+        .badge-used {
+            background: #808000;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Notification Modal -->
+    <div class="modal-overlay" id="notifyModal">
+        <div class="win95-window" style="width: 280px;">
+            <div class="win95-title-bar">
+                <div class="win95-title"><i class="fas fa-check-circle"></i> <span id="notifyTitle">Notice</span></div>
+                <div class="win95-title-buttons"><button class="win95-title-btn" onclick="closeNotify()">×</button></div>
+            </div>
+            <div class="win95-content" style="text-align: center;">
+                <p id="notifyMessage" style="margin-bottom: 16px;"></p>
+                <button class="win95-btn win95-btn-primary" onclick="closeNotify()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div class="modal-overlay" id="resetModal">
+        <div class="win95-window modal-window">
+            <div class="win95-title-bar">
+                <div class="win95-title">
+                    <i class="fas fa-key"></i> Reset Password
+                </div>
+                <div class="win95-title-buttons">
+                    <button class="win95-title-btn" onclick="closeResetModal()">×</button>
+                </div>
+            </div>
+            <div class="win95-content">
+                <form id="resetForm" method="POST">
+                    <div style="margin-bottom: 12px;">
+                        <label>New Password:</label>
+                        <input type="password" name="new_password" class="win95-input" style="width: 100%;" minlength="6" required>
+                        <div style="font-size: 10px; color: var(--win95-button-shadow);">Minimum 6 characters</div>
+                    </div>
+                    <div class="win95-dialog-buttons" style="border: none; margin-top: 0; padding-top: 0;">
+                        <button type="button" class="win95-btn" onclick="closeResetModal()">Cancel</button>
+                        <button type="submit" class="win95-btn win95-btn-primary">Reset</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="desktop">
+        <div class="win95-window main-window">
+            <div class="win95-title-bar" style="background: linear-gradient(90deg, #800000, #c00000);">
+                <div class="win95-title">
+                    <i class="fas fa-shield-halved"></i>
+                    Admin Panel - API Manager
+                </div>
+                <div class="win95-title-buttons">
+                    <button class="win95-title-btn">−</button>
+                    <button class="win95-title-btn">□</button>
+                    <button class="win95-title-btn">×</button>
+                </div>
+            </div>
+            
+            <div class="win95-toolbar">
+                <button class="win95-toolbar-btn" title="Dashboard" onclick="location.href='/developer/dashboard'"><i class="fas fa-home"></i></button>
+                <div class="win95-toolbar-separator"></div>
+                <button class="win95-toolbar-btn" title="Refresh" onclick="location.reload()"><i class="fas fa-sync"></i></button>
+                <div style="flex: 1;"></div>
+                <button class="win95-toolbar-btn" title="Sign Out" onclick="location.href='/developer/logout'"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+            
+            <div class="win95-content">
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-value">{{ stats.total_developers }}</div>
+                        <div class="stat-label">Developers</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">{{ stats.total_apps }}</div>
+                        <div class="stat-label">Applications</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">{{ stats.active_sessions }}</div>
+                        <div class="stat-label">Active Sessions</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">{{ stats.total_invite_codes }}</div>
+                        <div class="stat-label">Invite Codes</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">{{ stats.unused_codes }}</div>
+                        <div class="stat-label">Unused Codes</div>
+                    </div>
+                </div>
+                
+                <div class="section-title">
+                    <i class="fas fa-ticket"></i> Invite Codes
+                    <div style="flex: 1;"></div>
+                    <form action="/admin/invite-codes" method="POST" class="form-inline">
+                        <select name="max_uses" class="win95-select">
+                            <option value="1">Single use</option>
+                            <option value="5">5 uses</option>
+                            <option value="10">10 uses</option>
+                            <option value="0">Unlimited</option>
+                        </select>
+                        <button type="submit" class="win95-btn"><i class="fas fa-plus"></i> Generate</button>
+                    </form>
+                </div>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Created</th>
+                            <th>Uses</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for code in invite_codes %}
+                        <tr>
+                            <td><span class="code-display">{{ code.code }}</span></td>
+                            <td>{{ code.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ code.use_count }}{% if code.max_uses > 0 %} / {{ code.max_uses }}{% else %} / ∞{% endif %}</td>
+                            <td>
+                                {% if code.max_uses > 0 and code.use_count >= code.max_uses %}
+                                    <span class="badge badge-used">Used</span>
+                                {% else %}
+                                    <span class="badge badge-active">Active</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-row">
+                                    <button class="win95-btn btn-small" onclick="copyCode('{{ code.code }}')"><i class="fas fa-copy"></i></button>
+                                    <form action="/admin/invite-codes/{{ code.code }}/delete" method="POST" style="display:inline;">
+                                        <button type="submit" class="win95-btn btn-small" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 20px; color: var(--win95-button-shadow);">No invite codes. Generate one above.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <div class="section-title">
+                    <i class="fas fa-users"></i> Users
+                </div>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Created</th>
+                            <th>Apps</th>
+                            <th>Role</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in developers %}
+                        <tr>
+                            <td><strong>{{ user.name }}</strong></td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ user.applications | length }}</td>
+                            <td>
+                                {% if user.is_super_admin %}
+                                    <span class="badge badge-super">Super Admin</span>
+                                {% elif user.is_admin %}
+                                    <span class="badge badge-admin">Admin</span>
+                                {% else %}
+                                    <span class="badge badge-user">Developer</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-row">
+                                    {% if developer.is_super_admin and user.id != developer.id %}
+                                        <form action="/admin/users/{{ user.id }}/impersonate" method="POST" style="display:inline;">
+                                            <button type="submit" class="win95-btn btn-small" title="Login as"><i class="fas fa-user-secret"></i></button>
+                                        </form>
+                                    {% endif %}
+                                    {% if user.id != developer.id and not user.is_super_admin %}
+                                        <button class="win95-btn btn-small" onclick="openResetModal('{{ user.id }}')" title="Reset password"><i class="fas fa-key"></i></button>
+                                        {% if developer.is_super_admin %}
+                                            <form action="/admin/users/{{ user.id }}/toggle-admin" method="POST" style="display:inline;">
+                                                <button type="submit" class="win95-btn btn-small" title="Toggle admin"><i class="fas fa-user-{% if user.is_admin %}minus{% else %}plus{% endif %}"></i></button>
+                                            </form>
+                                            <form action="/admin/users/{{ user.id }}/delete" method="POST" style="display:inline;">
+                                                <button type="submit" class="win95-btn btn-small" onclick="return confirm('Delete user and all their apps?')" title="Delete"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="win95-statusbar">
+                <div class="win95-status-section">Admin Panel - {{ developer.name }}</div>
+                <div class="win95-status-section">{{ stats.total_developers }} users</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="win95-taskbar">
+        <button class="win95-start-btn">
+            <i class="fas fa-windows" style="color: #ff0000;"></i>
+            Start
+        </button>
+        <div class="win95-taskbar-items">
+            <div class="win95-taskbar-item" onclick="location.href='/developer/dashboard'">
+                <i class="fas fa-server"></i>
+                Dashboard
+            </div>
+            <div class="win95-taskbar-item active">
+                <i class="fas fa-shield-halved"></i>
+                Admin
+            </div>
+        </div>
+        <div class="win95-systray">
+            <i class="fas fa-volume-up"></i>
+            <span id="clock"></span>
+        </div>
+    </div>
+    
+    <script>
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+        
+        function copyCode(code) {
+            navigator.clipboard.writeText(code);
+            showNotify('Copied!', 'Invite code copied to clipboard.');
+        }
+        
+        function showNotify(title, message) {
+            document.getElementById('notifyTitle').textContent = title;
+            document.getElementById('notifyMessage').textContent = message;
+            document.getElementById('notifyModal').classList.add('active');
+        }
+        
+        function closeNotify() {
+            document.getElementById('notifyModal').classList.remove('active');
+        }
+        
+        function openResetModal(userId) {
+            document.getElementById('resetForm').action = '/admin/users/' + userId + '/reset-password';
+            document.getElementById('resetModal').classList.add('active');
+        }
+        
+        function closeResetModal() {
+            document.getElementById('resetModal').classList.remove('active');
+        }
+        
+        document.getElementById('resetModal').addEventListener('click', function(e) {
+            if (e.target === this) closeResetModal();
+        });
+    </script>
+</body>
+</html>

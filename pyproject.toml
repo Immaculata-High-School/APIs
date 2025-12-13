@@ -1,0 +1,15 @@
+[project]
+name = "powerschool-ui"
+version = "0.1.0"
+description = "Alternative PowerSchool UI"
+authors = ["Your Name <you@example.com>"]
+requires-python = ">=3.11"
+dependencies = [
+    "flask",
+    "requests",
+    "beautifulsoup4",
+    "lxml",
+    "flask-sqlalchemy",
+    "psycopg2-binary",
+    "cryptography",
+]

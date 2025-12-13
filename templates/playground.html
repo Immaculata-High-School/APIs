@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student API Playground - API Manager</title>
+    <link rel="stylesheet" href="/static/win95.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { padding-bottom: 32px; }
+        .layout { display: flex; gap: 8px; padding: 8px; height: calc(100vh - 40px); }
+        .sidebar-window { width: 340px; display: flex; flex-direction: column; }
+        .main-window { flex: 1; display: flex; flex-direction: column; }
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 8px; }
+        .endpoint-list { display: flex; flex-direction: column; gap: 2px; }
+        .endpoint-btn {
+            display: flex; align-items: center; gap: 8px; width: 100%;
+            padding: 4px 8px; background: var(--win95-input-bg); border: none;
+            cursor: pointer; text-align: left; font-size: 11px; font-family: inherit;
+        }
+        .endpoint-btn:hover { background: var(--win95-selection); color: var(--win95-selection-text); }
+        .endpoint-btn.active { background: var(--win95-selection); color: var(--win95-selection-text); }
+        .method { font-family: 'Courier New', monospace; font-size: 9px; font-weight: bold; padding: 1px 4px; }
+        .method-get { background: #90EE90; color: #000; }
+        .method-post { background: #87CEEB; color: #000; }
+        .method-put { background: #FFD700; color: #000; }
+        .method-delete { background: #FFB6C1; color: #000; }
+        .endpoint-btn .path { font-family: 'Courier New', monospace; font-size: 10px; }
+        .request-bar {
+            display: flex; gap: 8px; padding: 8px; align-items: center;
+            border-bottom: 2px solid; border-color: var(--win95-button-shadow) var(--win95-button-highlight) var(--win95-button-highlight) var(--win95-button-shadow);
+        }
+        .url-input { flex: 1; font-family: 'Courier New', monospace; }
+        .response-area { flex: 1; overflow: auto; padding: 8px; }
+        .response-code {
+            font-family: 'Courier New', monospace; font-size: 11px;
+            background: var(--win95-input-bg); border: 2px solid;
+            border-color: var(--win95-button-shadow) var(--win95-button-highlight) var(--win95-button-highlight) var(--win95-button-shadow);
+            padding: 8px; height: 100%; overflow: auto; white-space: pre-wrap; word-break: break-all;
+        }
+        .auth-form { padding: 8px; }
+        .auth-form .form-field { margin-bottom: 8px; }
+        .auth-form label { display: block; margin-bottom: 2px; }
+        .auth-form input { width: 100%; }
+        .auth-status {
+            display: flex; align-items: center; gap: 8px; padding: 8px;
+            border-bottom: 1px solid var(--win95-button-shadow);
+            background: var(--win95-button-face);
+        }
+        .auth-dot { width: 10px; height: 10px; border-radius: 50%; background: #800000; }
+        .auth-dot.connected { background: #008000; }
+        .json-key { color: #800000; }
+        .json-string { color: #008000; }
+        .json-number { color: #000080; }
+        .json-bool { color: #800080; }
+        .section-label { font-weight: bold; padding: 4px 8px; background: var(--win95-button-face); border-bottom: 1px solid var(--win95-button-shadow); }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .method-select { width: 70px; }
+        .request-body-section { padding: 8px; border-top: 1px solid var(--win95-button-shadow); }
+        .request-body-section textarea { width: 100%; height: 80px; font-family: 'Courier New', monospace; font-size: 11px; }
+    </style>
+</head>
+<body>
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="win95-window" style="width: 300px;">
+            <div class="win95-title-bar">
+                <div class="win95-title"><i class="fas fa-exclamation-triangle"></i> <span id="modalTitle">Alert</span></div>
+                <div class="win95-title-buttons"><button class="win95-title-btn" onclick="closeModal()">×</button></div>
+            </div>
+            <div class="win95-content" style="text-align: center;">
+                <p id="modalMessage" style="margin-bottom: 16px;"></p>
+                <button class="win95-btn win95-btn-primary" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="layout">
+        <div class="win95-window sidebar-window">
+            <div class="win95-title-bar">
+                <div class="win95-title"><i class="fas fa-lock"></i> Authentication</div>
+            </div>
+            <div class="auth-status">
+                <span class="auth-dot" id="authDot"></span>
+                <span id="authStatus">Not linked</span>
+            </div>
+            <div class="auth-form">
+                <div class="form-field">
+                    <label>District URL:</label>
+                    <input type="text" id="districtUrl" class="win95-input" placeholder="yourschool.powerschool.com">
+                </div>
+                <div class="form-field">
+                    <label>Username:</label>
+                    <input type="text" id="psUsername" class="win95-input" placeholder="PowerSchool username">
+                </div>
+                <div class="form-field">
+                    <label>Password:</label>
+                    <input type="password" id="psPassword" class="win95-input" placeholder="Password">
+                </div>
+                <button class="win95-btn" onclick="quickAuth()" style="width: 100%;"><i class="fas fa-link"></i> Link Account</button>
+                <div style="margin-top: 8px; text-align: center; font-size: 10px; color: var(--win95-button-shadow);">— or use token —</div>
+                <div class="form-field" style="margin-top: 8px;">
+                    <label>Access Token:</label>
+                    <div style="display: flex; gap: 4px;">
+                        <input type="password" id="accessToken" class="win95-input" placeholder="at_xxxxx...">
+                        <button class="win95-btn" onclick="setToken()">Set</button>
+                    </div>
+                </div>
+            </div>
+            <div class="section-label"><i class="fas fa-list"></i> Student Endpoints</div>
+            <div class="sidebar-content">
+                <div class="endpoint-list">
+                    <button class="endpoint-btn active" onclick="selectEndpoint('GET', '/api/v1/me', this)">
+                        <span class="method method-get">GET</span><span class="path">/api/v1/me</span>
+                    </button>
+                    <button class="endpoint-btn" onclick="selectEndpoint('GET', '/api/v1/grades', this)">
+                        <span class="method method-get">GET</span><span class="path">/api/v1/grades</span>
+                    </button>
+                    <button class="endpoint-btn" onclick="selectEndpoint('GET', '/api/v1/grades/summary', this)">
+                        <span class="method method-get">GET</span><span class="path">/api/v1/grades/summary</span>
+                    </button>
+                    <button class="endpoint-btn" onclick="selectEndpoint('GET', '/api/v1/courses', this)">
+                        <span class="method method-get">GET</span><span class="path">/api/v1/courses</span>
+                    </button>
+                    <button class="endpoint-btn" onclick="selectEndpoint('GET', '/api/v1/courses/1', this)">
+                        <span class="method method-get">GET</span><span class="path">/api/v1/courses/:id</span>
+                    </button>
+                    <button class="endpoint-btn" onclick="selectEndpoint('GET', '/api/v1/courses/1/assignments', this)">
+                        <span class="method method-get">GET</span><span class="path">/courses/:id/assignments</span>
+                    </button>
+                    <button class="endpoint-btn" onclick="selectEndpoint('GET', '/api/v1/schedule', this)">
+                        <span class="method method-get">GET</span><span class="path">/api/v1/schedule</span>
+                    </button>
+                    <button class="endpoint-btn" onclick="selectEndpoint('GET', '/api/v1/attendance', this)">
+                        <span class="method method-get">GET</span><span class="path">/api/v1/attendance</span>
+                    </button>
+                    <button class="endpoint-btn" onclick="selectEndpoint('GET', '/api/v1/assignments', this)">
+                        <span class="method method-get">GET</span><span class="path">/api/v1/assignments</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="win95-window main-window">
+            <div class="win95-title-bar">
+                <div class="win95-title"><i class="fas fa-user-graduate"></i> Student API Playground</div>
+                <div class="win95-title-buttons">
+                    <button class="win95-title-btn">−</button>
+                    <button class="win95-title-btn">□</button>
+                    <button class="win95-title-btn" onclick="location.href='/developer/dashboard'">×</button>
+                </div>
+            </div>
+            <div class="win95-toolbar">
+                <button class="win95-toolbar-btn" onclick="location.href='/developer/dashboard'" title="Dashboard"><i class="fas fa-home"></i></button>
+                <button class="win95-toolbar-btn" onclick="location.href='/playground/teachers'" title="Teacher Playground"><i class="fas fa-chalkboard-teacher"></i></button>
+                <button class="win95-toolbar-btn" onclick="location.href='/oauth-playground'" title="OAuth Playground"><i class="fas fa-key"></i></button>
+                <div class="win95-toolbar-separator"></div>
+                <button class="win95-toolbar-btn" onclick="location.href='/docs'" title="Docs"><i class="fas fa-book"></i></button>
+                <div style="flex:1;"></div>
+                <button class="win95-toolbar-btn" onclick="location.href='/developer/logout'" title="Sign Out"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+            <div class="request-bar">
+                <select id="requestMethod" class="win95-select method-select">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+                <input type="text" id="endpointUrl" value="/api/v1/me" class="win95-input url-input">
+                <button class="win95-btn win95-btn-primary" onclick="sendRequest()"><i class="fas fa-paper-plane"></i> Send</button>
+            </div>
+            <div class="request-body-section" id="requestBodySection" style="display: none;">
+                <label>Request Body (JSON):</label>
+                <textarea id="requestBody" class="win95-input" placeholder='{"key": "value"}'></textarea>
+            </div>
+            <div class="response-area">
+                <div class="response-code" id="responseBody">// Link your account or set a token, then send a request</div>
+            </div>
+            <div class="win95-statusbar">
+                <div class="win95-status-section" id="statusText">Ready</div>
+                <div class="win95-status-section" id="responseTime"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="win95-taskbar">
+        <button class="win95-start-btn"><i class="fas fa-windows" style="color: #ff0000;"></i> Start</button>
+        <div class="win95-taskbar-items">
+            <div class="win95-taskbar-item" onclick="location.href='/developer/dashboard'"><i class="fas fa-server"></i> Dashboard</div>
+            <div class="win95-taskbar-item active"><i class="fas fa-user-graduate"></i> Student API</div>
+        </div>
+        <div class="win95-systray"><i class="fas fa-volume-up"></i> <span id="clock"></span></div>
+    </div>
+    
+    <script>
+        let accessToken = localStorage.getItem('playground_token') || '';
+        
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+        
+        // Show/hide request body based on method
+        document.getElementById('requestMethod').addEventListener('change', function() {
+            const bodySection = document.getElementById('requestBodySection');
+            bodySection.style.display = (this.value === 'POST' || this.value === 'PUT') ? 'block' : 'none';
+        });
+        
+        function updateAuthStatus() {
+            const dot = document.getElementById('authDot');
+            const status = document.getElementById('authStatus');
+            if (accessToken) {
+                dot.classList.add('connected');
+                status.textContent = 'Linked';
+                document.getElementById('accessToken').value = accessToken.substring(0, 20) + '...';
+            } else {
+                dot.classList.remove('connected');
+                status.textContent = 'Not linked';
+            }
+        }
+        updateAuthStatus();
+        
+        function setToken() {
+            accessToken = document.getElementById('accessToken').value;
+            localStorage.setItem('playground_token', accessToken);
+            updateAuthStatus();
+        }
+        
+        function selectEndpoint(method, path, btn) {
+            document.querySelectorAll('.endpoint-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('endpointUrl').value = path;
+            document.getElementById('requestMethod').value = method;
+            document.getElementById('requestBodySection').style.display = (method === 'POST' || method === 'PUT') ? 'block' : 'none';
+        }
+        
+        async function sendRequest() {
+            const method = document.getElementById('requestMethod').value;
+            const endpoint = document.getElementById('endpointUrl').value;
+            const responseBody = document.getElementById('responseBody');
+            
+            if (!accessToken) {
+                responseBody.innerHTML = '<span style="color: #800000;">// Error: No access token set\n// Link your account or enter a token</span>';
+                return;
+            }
+            
+            responseBody.innerHTML = '// Loading...';
+            document.getElementById('statusText').textContent = 'Sending ' + method + ' request...';
+            const startTime = performance.now();
+            
+            try {
+                const options = {
+                    method: method,
+                    headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' }
+                };
+                
+                if (method === 'POST' || method === 'PUT') {
+                    const body = document.getElementById('requestBody').value;
+                    if (body.trim()) {
+                        options.body = body;
+                    }
+                }
+                
+                const response = await fetch(endpoint, options);
+                const endTime = performance.now();
+                const data = await response.json();
+                
+                document.getElementById('statusText').textContent = method + ' ' + response.status + ' ' + response.statusText;
+                document.getElementById('responseTime').textContent = Math.round(endTime - startTime) + 'ms';
+                responseBody.innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+            } catch (e) {
+                responseBody.innerHTML = '<span style="color: #800000;">// Error: ' + e.message + '</span>';
+                document.getElementById('statusText').textContent = 'Error';
+            }
+        }
+        
+        function showModal(title, message) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+        
+        function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+        document.getElementById('modalOverlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+        
+        async function quickAuth() {
+            const districtUrl = document.getElementById('districtUrl').value;
+            const username = document.getElementById('psUsername').value;
+            const password = document.getElementById('psPassword').value;
+            
+            if (!districtUrl || !username || !password) {
+                showModal('Missing Info', 'Please fill in all fields.');
+                return;
+            }
+            
+            document.getElementById('statusText').textContent = 'Linking...';
+            
+            try {
+                const response = await fetch('/playground/quick-auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ district_url: districtUrl, username, password })
+                });
+                const data = await response.json();
+                
+                if (data.access_token) {
+                    accessToken = data.access_token;
+                    localStorage.setItem('playground_token', accessToken);
+                    updateAuthStatus();
+                    document.getElementById('responseBody').innerHTML = '<span style="color: #008000;">// Linked as ' + data.student_name + '\n// Token expires in ' + data.expires_in + ' seconds</span>';
+                    document.getElementById('statusText').textContent = 'Linked as ' + data.student_name;
+                } else {
+                    showModal('Failed', data.error || 'Could not link account');
+                    document.getElementById('statusText').textContent = 'Link failed';
+                }
+            } catch (e) {
+                showModal('Error', e.message);
+                document.getElementById('statusText').textContent = 'Error';
+            }
+        }
+        
+        function syntaxHighlight(json) {
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'json-number';
+                if (/^"/.test(match)) { cls = /:$/.test(match) ? 'json-key' : 'json-string'; }
+                else if (/true|false/.test(match)) { cls = 'json-bool'; }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+    </script>
+</body>
+</html>

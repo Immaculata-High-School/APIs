@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - API Manager</title>
+    <link rel="stylesheet" href="/static/win95.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { padding-bottom: 32px; }
+        .layout { display: flex; gap: 8px; padding: 8px; min-height: calc(100vh - 40px); }
+        .sidebar-window { width: 240px; position: sticky; top: 8px; height: fit-content; max-height: calc(100vh - 56px); display: flex; flex-direction: column; }
+        .main-window { flex: 1; min-width: 0; }
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 4px; }
+        .nav-section { margin-bottom: 8px; }
+        .nav-section h4 { font-size: 10px; color: var(--win95-button-shadow); margin-bottom: 4px; padding: 4px; text-transform: uppercase; background: var(--win95-button-face); }
+        .nav-link { display: block; padding: 3px 8px; cursor: pointer; font-size: 11px; text-decoration: none; color: var(--win95-text); }
+        .nav-link:hover { background: var(--win95-selection); color: var(--win95-selection-text); }
+        .nav-link.active { background: var(--win95-selection); color: var(--win95-selection-text); }
+        .nav-link code { font-size: 9px; }
+        .doc-content { padding: 16px; overflow-y: auto; }
+        .doc-content h1 { font-size: 18px; margin-bottom: 12px; border-bottom: 2px solid var(--win95-window-title); padding-bottom: 8px; color: var(--win95-window-title); }
+        .doc-content h2 { font-size: 15px; margin: 24px 0 12px; color: var(--win95-window-title); border-bottom: 1px solid var(--win95-button-shadow); padding-bottom: 4px; }
+        .doc-content h3 { font-size: 13px; margin: 16px 0 8px; }
+        .doc-content p { margin-bottom: 10px; line-height: 1.6; }
+        .doc-content code { background: #ffffcc; padding: 1px 4px; font-family: 'Courier New', monospace; font-size: 11px; border: 1px solid #808000; }
+        .doc-content ul { margin: 8px 0 12px 20px; }
+        .doc-content li { margin-bottom: 4px; line-height: 1.5; }
+        .endpoint-card { border: 2px solid; border-color: var(--win95-button-highlight) var(--win95-button-shadow) var(--win95-button-shadow) var(--win95-button-highlight); margin: 16px 0; background: var(--win95-button-face); }
+        .endpoint-header { padding: 8px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--win95-button-shadow); background: var(--win95-button-face); }
+        .endpoint-method { font-family: 'Courier New', monospace; font-size: 10px; font-weight: bold; padding: 2px 8px; }
+        .method-get { background: #90EE90; color: #000; }
+        .method-post { background: #87CEEB; color: #000; }
+        .method-delete { background: #FFB6C1; color: #000; }
+        .endpoint-path { font-family: 'Courier New', monospace; font-size: 12px; font-weight: bold; }
+        .endpoint-desc { font-size: 11px; color: var(--win95-button-shadow); margin-left: auto; }
+        .endpoint-body { padding: 12px; background: var(--win95-input-bg); }
+        .endpoint-body p { font-size: 12px; }
+        .code-block { background: #000080; color: #00ff00; padding: 12px; font-family: 'Courier New', monospace; font-size: 11px; overflow-x: auto; white-space: pre; margin: 8px 0; border: 2px solid; border-color: var(--win95-button-shadow) var(--win95-button-highlight) var(--win95-button-highlight) var(--win95-button-shadow); }
+        .code-block.response { background: #000; color: #0f0; }
+        .code-block.request { background: #000040; color: #ffff00; }
+        .param-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 11px; }
+        .param-table th, .param-table td { border: 1px solid var(--win95-button-shadow); padding: 4px 8px; text-align: left; }
+        .param-table th { background: var(--win95-button-face); font-weight: bold; }
+        .param-table td:first-child { font-family: 'Courier New', monospace; background: #ffffcc; }
+        .scope-badge { display: inline-block; background: var(--win95-window-title); color: white; padding: 1px 6px; font-size: 10px; margin-right: 4px; }
+        .info-box { background: #ffffcc; border: 2px solid #808000; padding: 10px; margin: 12px 0; font-size: 11px; }
+        .info-box i { color: #808000; margin-right: 6px; }
+        .warning-box { background: #fff0f0; border: 2px solid #800000; padding: 10px; margin: 12px 0; font-size: 11px; }
+        .warning-box i { color: #800000; margin-right: 6px; }
+        .tabs { display: flex; gap: 2px; margin-bottom: -2px; }
+        .tab { padding: 4px 12px; background: var(--win95-button-face); border: 2px solid; border-color: var(--win95-button-highlight) var(--win95-button-shadow) var(--win95-button-shadow) var(--win95-button-highlight); cursor: pointer; font-size: 11px; }
+        .tab.active { background: var(--win95-input-bg); border-bottom-color: var(--win95-input-bg); position: relative; z-index: 1; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <div class="win95-window sidebar-window">
+            <div class="win95-title-bar">
+                <div class="win95-title"><i class="fas fa-book"></i> Navigation</div>
+            </div>
+            <div class="sidebar-content">
+                <div class="nav-section">
+                    <h4>Getting Started</h4>
+                    <a href="#overview" class="nav-link active">Overview</a>
+                    <a href="#authentication" class="nav-link">Authentication</a>
+                    <a href="#oauth" class="nav-link">OAuth 2.0 Flow</a>
+                    <a href="#errors" class="nav-link">Error Handling</a>
+                </div>
+                <div class="nav-section">
+                    <h4>Student Endpoints</h4>
+                    <a href="#student-me" class="nav-link"><code>GET</code> /me</a>
+                    <a href="#student-grades" class="nav-link"><code>GET</code> /grades</a>
+                    <a href="#student-grades-summary" class="nav-link"><code>GET</code> /grades/summary</a>
+                    <a href="#student-courses" class="nav-link"><code>GET</code> /courses</a>
+                    <a href="#student-course" class="nav-link"><code>GET</code> /courses/:id</a>
+                    <a href="#student-course-assignments" class="nav-link"><code>GET</code> /courses/:id/assignments</a>
+                    <a href="#student-schedule" class="nav-link"><code>GET</code> /schedule</a>
+                    <a href="#student-attendance" class="nav-link"><code>GET</code> /attendance</a>
+                    <a href="#student-assignments" class="nav-link"><code>GET</code> /assignments</a>
+                </div>
+                <div class="nav-section">
+                    <h4>Teacher Endpoints</h4>
+                    <a href="#teacher-me" class="nav-link"><code>GET</code> /teacher/me</a>
+                    <a href="#teacher-classes" class="nav-link"><code>GET</code> /teacher/classes</a>
+                    <a href="#teacher-class" class="nav-link"><code>GET</code> /classes/:id</a>
+                    <a href="#teacher-students" class="nav-link"><code>GET</code> /classes/:id/students</a>
+                    <a href="#teacher-assignments" class="nav-link"><code>GET</code> /classes/:id/assignments</a>
+                    <a href="#teacher-create-assignment" class="nav-link"><code>POST</code> Create Assignment</a>
+                    <a href="#teacher-grades" class="nav-link"><code>GET</code> /classes/:id/grades</a>
+                    <a href="#teacher-categories" class="nav-link"><code>GET</code> /categories</a>
+                    <a href="#teacher-roster" class="nav-link"><code>GET</code> /classes/:id/roster</a>
+                    <a href="#teacher-scoring" class="nav-link"><code>GET</code> /classes/:id/scoring</a>
+                    <a href="#teacher-all-students" class="nav-link"><code>GET</code> /classes/all/students</a>
+                    <a href="#teacher-search" class="nav-link"><code>GET</code> /search/students</a>
+                    <a href="#teacher-student-detail" class="nav-link"><code>GET</code> /students/:id</a>
+                    <a href="#teacher-student-schedule" class="nav-link"><code>GET</code> /students/:id/schedule</a>
+                    <a href="#teacher-student-grades" class="nav-link"><code>GET</code> /students/:id/grades</a>
+                    <a href="#teacher-scores" class="nav-link"><code>POST</code> Submit Scores</a>
+                    <a href="#teacher-scores-batch" class="nav-link"><code>POST</code> Batch Scores</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="win95-window main-window">
+            <div class="win95-title-bar">
+                <div class="win95-title"><i class="fas fa-file-alt"></i> API Documentation - API Manager</div>
+                <div class="win95-title-buttons">
+                    <button class="win95-title-btn">−</button>
+                    <button class="win95-title-btn">□</button>
+                    <button class="win95-title-btn" onclick="location.href='/developer/dashboard'">×</button>
+                </div>
+            </div>
+            <div class="win95-toolbar">
+                <button class="win95-toolbar-btn" onclick="location.href='/developer/dashboard'" title="Dashboard"><i class="fas fa-home"></i></button>
+                <button class="win95-toolbar-btn" onclick="location.href='/playground'" title="Student Playground"><i class="fas fa-flask"></i></button>
+                <button class="win95-toolbar-btn" onclick="location.href='/playground/teachers'" title="Teacher Playground"><i class="fas fa-chalkboard-teacher"></i></button>
+                <button class="win95-toolbar-btn" onclick="location.href='/oauth-playground'" title="OAuth"><i class="fas fa-key"></i></button>
+                <div style="flex:1;"></div>
+                <button class="win95-toolbar-btn" onclick="location.href='/developer/logout'" title="Sign Out"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+            <div class="doc-content">
+                <!-- OVERVIEW -->
+                <h1 id="overview"><i class="fas fa-info-circle"></i> API Overview</h1>
+                <p>API Manager provides a RESTful API for accessing PowerSchool student and teacher data. The API uses OAuth 2.0 for authentication and returns JSON responses.</p>
+                
+                <div class="info-box">
+                    <i class="fas fa-lightbulb"></i>
+                    <strong>Base URL:</strong> All API endpoints are relative to your application's base URL (e.g., <code>https://yourapp.com/api/v1/</code>)
+                </div>
+                
+                <h3>Quick Start</h3>
+                <ol>
+                    <li>Create an application in the <a href="/developer/dashboard">Developer Dashboard</a></li>
+                    <li>Implement the OAuth 2.0 flow to get an access token</li>
+                    <li>Make API requests with the access token in the Authorization header</li>
+                </ol>
+
+                <!-- AUTHENTICATION -->
+                <h2 id="authentication"><i class="fas fa-lock"></i> Authentication</h2>
+                <p>All API requests require a valid access token in the <code>Authorization</code> header using the Bearer scheme:</p>
+                
+                <div class="code-block request">Authorization: Bearer at_xxxxxxxxxxxxxxxxxxxxx</div>
+                
+                <h3>Token Types</h3>
+                <table class="param-table">
+                    <tr><th>Prefix</th><th>Type</th><th>Description</th></tr>
+                    <tr><td>at_</td><td>Student Access Token</td><td>Access student data (grades, schedule, etc.)</td></tr>
+                    <tr><td>tat_</td><td>Teacher Access Token</td><td>Access teacher data (classes, students, scores)</td></tr>
+                    <tr><td>rt_</td><td>Refresh Token</td><td>Used to obtain new access tokens</td></tr>
+                </table>
+
+                <!-- OAUTH -->
+                <h2 id="oauth"><i class="fas fa-key"></i> OAuth 2.0 Flow</h2>
+                <p>The API uses the Authorization Code flow for secure authentication.</p>
+                
+                <h3>Step 1: Redirect to Authorization</h3>
+                <p>Redirect users to the authorization endpoint:</p>
+                <div class="code-block request">GET /oauth/authorize
+    ?client_id=app_xxxxxxxxxxxx
+    &redirect_uri=https://yourapp.com/callback
+    &scope=profile grades schedule
+    &response_type=code
+    &state=random_csrf_token</div>
+                
+                <h3>Available Scopes (Student)</h3>
+                <table class="param-table">
+                    <tr><th>Scope</th><th>Description</th></tr>
+                    <tr><td>profile</td><td>Basic student information (name, ID, school)</td></tr>
+                    <tr><td>grades</td><td>Current grades and GPA</td></tr>
+                    <tr><td>schedule</td><td>Class schedule</td></tr>
+                    <tr><td>attendance</td><td>Attendance records</td></tr>
+                    <tr><td>assignments</td><td>Assignment details and scores</td></tr>
+                </table>
+                
+                <h3>Available Scopes (Teacher)</h3>
+                <table class="param-table">
+                    <tr><th>Scope</th><th>Description</th></tr>
+                    <tr><td>teacher.profile</td><td>Teacher profile information</td></tr>
+                    <tr><td>teacher.classes</td><td>Classes and sections taught</td></tr>
+                    <tr><td>teacher.students</td><td>Student roster and information</td></tr>
+                    <tr><td>teacher.grades</td><td>View and manage grades</td></tr>
+                    <tr><td>teacher.assignments</td><td>Create and manage assignments</td></tr>
+                    <tr><td>teacher.attendance</td><td>View student attendance</td></tr>
+                </table>
+                
+                <h3>Step 2: User Authorizes</h3>
+                <p>User logs in with PowerSchool credentials and approves access. They're redirected back with an authorization code:</p>
+                <div class="code-block">https://yourapp.com/callback?code=code_xxxxxxxxxxxx&state=random_csrf_token</div>
+                
+                <h3>Step 3: Exchange Code for Tokens</h3>
+                <div class="code-block request">POST /oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code
+&code=code_xxxxxxxxxxxx
+&client_id=app_xxxxxxxxxxxx
+&client_secret=secret_xxxxxxxxxxxx
+&redirect_uri=https://yourapp.com/callback</div>
+                
+                <h3>Token Response</h3>
+                <div class="code-block response">{
+    "access_token": "at_xxxxxxxxxxxxxxxxxxxx",
+    "refresh_token": "rt_xxxxxxxxxxxxxxxxxxxx",
+    "token_type": "Bearer",
+    "expires_in": 3600,
+    "scope": "profile grades schedule"
+}</div>
+                
+                <h3>Step 4: Refresh Tokens</h3>
+                <div class="code-block request">POST /oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=refresh_token
+&refresh_token=rt_xxxxxxxxxxxx
+&client_id=app_xxxxxxxxxxxx
+&client_secret=secret_xxxxxxxxxxxx</div>
+
+                <!-- ERRORS -->
+                <h2 id="errors"><i class="fas fa-exclamation-triangle"></i> Error Handling</h2>
+                <p>The API returns consistent error responses:</p>
+                <div class="code-block response">{
+    "error": "invalid_token",
+    "error_description": "The access token has expired"
+}</div>
+                
+                <table class="param-table">
+                    <tr><th>Status</th><th>Error</th><th>Description</th></tr>
+                    <tr><td>400</td><td>bad_request</td><td>Invalid request parameters</td></tr>
+                    <tr><td>401</td><td>invalid_token</td><td>Token missing, expired, or invalid</td></tr>
+                    <tr><td>403</td><td>insufficient_scope</td><td>Token lacks required scope</td></tr>
+                    <tr><td>404</td><td>not_found</td><td>Resource not found</td></tr>
+                    <tr><td>500</td><td>server_error</td><td>Internal server error</td></tr>
+                </table>
+
+                <!-- STUDENT ENDPOINTS -->
+                <h1 style="margin-top: 40px;"><i class="fas fa-user-graduate"></i> Student Endpoints</h1>
+                
+                <div class="endpoint-card" id="student-me">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/me</span>
+                        <span class="endpoint-desc">Student Profile</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">profile</span> Returns the authenticated student's profile information.</p>
+                        <h4>Example Response</h4>
+                        <div class="code-block response">{
+    "name": "John Smith",
+    "first_name": "John",
+    "last_name": "Smith",
+    "student_id": "12345",
+    "email": "john.smith@school.edu",
+    "school": "Example High School",
+    "grade_level": "11",
+    "photo_url": "/students/12345/photo"
+}</div>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="student-grades">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/grades</span>
+                        <span class="endpoint-desc">Current Grades</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">grades</span> Returns all current grades for the student.</p>
+                        <h4>Example Response</h4>
+                        <div class="code-block response">{
+    "courses": [
+        {
+            "course_id": "101",
+            "course_name": "AP Calculus BC",
+            "teacher": "Mrs. Johnson",
+            "period": "1",
+            "current_grade": "A",
+            "percent": 94.5,
+            "last_updated": "2024-12-12T15:30:00Z"
+        },
+        {
+            "course_id": "102",
+            "course_name": "English 11",
+            "teacher": "Mr. Williams",
+            "period": "2",
+            "current_grade": "B+",
+            "percent": 88.2,
+            "last_updated": "2024-12-12T14:00:00Z"
+        }
+    ],
+    "gpa": {
+        "weighted": 4.2,
+        "unweighted": 3.8
+    }
+}</div>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="student-grades-summary">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/grades/summary</span>
+                        <span class="endpoint-desc">Grade Summary</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">grades</span> Returns a summary of grades with GPA calculation.</p>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="student-courses">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/courses</span>
+                        <span class="endpoint-desc">All Courses</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">profile</span> Returns all enrolled courses.</p>
+                        <h4>Example Response</h4>
+                        <div class="code-block response">{
+    "courses": [
+        {
+            "id": "101",
+            "name": "AP Calculus BC",
+            "teacher": "Mrs. Johnson",
+            "period": "1",
+            "room": "B204",
+            "credits": 1.0
+        }
+    ]
+}</div>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="student-course">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/courses/:course_id</span>
+                        <span class="endpoint-desc">Single Course</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">profile</span> Returns detailed information about a specific course.</p>
+                        <h4>Path Parameters</h4>
+                        <table class="param-table">
+                            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                            <tr><td>course_id</td><td>string</td><td>The course/section ID</td></tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="student-course-assignments">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/courses/:course_id/assignments</span>
+                        <span class="endpoint-desc">Course Assignments</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">assignments</span> Returns all assignments for a specific course.</p>
+                        <h4>Query Parameters</h4>
+                        <table class="param-table">
+                            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                            <tr><td>limit</td><td>integer</td><td>Max results (default: 50)</td></tr>
+                            <tr><td>include_scores</td><td>boolean</td><td>Include student's scores</td></tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="student-schedule">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/schedule</span>
+                        <span class="endpoint-desc">Class Schedule</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">schedule</span> Returns the student's class schedule.</p>
+                        <h4>Example Response</h4>
+                        <div class="code-block response">{
+    "schedule": [
+        {
+            "period": "1",
+            "start_time": "08:00",
+            "end_time": "08:50",
+            "course": "AP Calculus BC",
+            "teacher": "Mrs. Johnson",
+            "room": "B204"
+        },
+        {
+            "period": "2",
+            "start_time": "08:55",
+            "end_time": "09:45",
+            "course": "English 11",
+            "teacher": "Mr. Williams",
+            "room": "A102"
+        }
+    ]
+}</div>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="student-attendance">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/attendance</span>
+                        <span class="endpoint-desc">Attendance Records</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">attendance</span> Returns attendance records.</p>
+                        <h4>Query Parameters</h4>
+                        <table class="param-table">
+                            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                            <tr><td>start_date</td><td>string</td><td>Start date (YYYY-MM-DD)</td></tr>
+                            <tr><td>end_date</td><td>string</td><td>End date (YYYY-MM-DD)</td></tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="student-assignments">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/assignments</span>
+                        <span class="endpoint-desc">All Assignments</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">assignments</span> Returns assignments across all courses.</p>
+                        <h4>Query Parameters</h4>
+                        <table class="param-table">
+                            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                            <tr><td>limit</td><td>integer</td><td>Max results (default: 20)</td></tr>
+                            <tr><td>status</td><td>string</td><td>Filter: upcoming, past, missing</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TEACHER ENDPOINTS -->
+                <h1 style="margin-top: 40px;"><i class="fas fa-chalkboard-teacher"></i> Teacher Endpoints</h1>
+                
+                <div class="warning-box">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Teacher Authentication Required:</strong> All teacher endpoints require a teacher access token (prefix: <code>tat_</code>)
+                </div>
+                
+                <div class="endpoint-card" id="teacher-me">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/me</span>
+                        <span class="endpoint-desc">Teacher Profile</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.profile</span> Returns the authenticated teacher's profile.</p>
+                        <h4>Example Response</h4>
+                        <div class="code-block response">{
+    "name": "Mrs. Johnson",
+    "email": "johnson@school.edu",
+    "department": "Mathematics",
+    "school": "Example High School"
+}</div>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-classes">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/classes</span>
+                        <span class="endpoint-desc">All Classes</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.classes</span> Returns all classes/sections taught by the teacher.</p>
+                        <h4>Example Response</h4>
+                        <div class="code-block response">{
+    "classes": [
+        {
+            "section_id": 1001,
+            "course_name": "AP Calculus BC",
+            "period": "1",
+            "room": "B204",
+            "student_count": 28,
+            "term": "Fall 2024"
+        }
+    ]
+}</div>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-class">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/classes/:section_id</span>
+                        <span class="endpoint-desc">Single Class</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.classes</span> Returns detailed information about a specific class.</p>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-students">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/classes/:section_id/students</span>
+                        <span class="endpoint-desc">Class Students</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.students</span> Returns all students enrolled in a class.</p>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-assignments">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/classes/:section_id/assignments</span>
+                        <span class="endpoint-desc">Class Assignments</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.assignments</span> Returns all assignments for a class.</p>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-create-assignment">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-post">POST</span>
+                        <span class="endpoint-path">/api/v1/teacher/classes/:section_id/assignments</span>
+                        <span class="endpoint-desc">Create Assignment</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.assignments</span> Creates a new assignment.</p>
+                        <h4>Request Body</h4>
+                        <div class="code-block request">{
+    "name": "Chapter 5 Test",
+    "category_id": 1,
+    "due_date": "2024-12-20",
+    "total_points": 100,
+    "description": "Test covering derivatives",
+    "publish_scores": false
+}</div>
+                        <h4>Response</h4>
+                        <div class="code-block response">{
+    "success": true,
+    "assignment_id": 5432,
+    "message": "Assignment created successfully"
+}</div>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-grades">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/classes/:section_id/grades</span>
+                        <span class="endpoint-desc">Class Grades</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.grades</span> Returns grade information for all students in a class.</p>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-categories">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/categories</span>
+                        <span class="endpoint-desc">Grade Categories</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.grades</span> Returns available grade categories (Tests, Homework, etc.)</p>
+                        <h4>Example Response</h4>
+                        <div class="code-block response">{
+    "categories": [
+        {"id": 1, "name": "Tests", "weight": 40},
+        {"id": 2, "name": "Quizzes", "weight": 20},
+        {"id": 3, "name": "Homework", "weight": 25},
+        {"id": 4, "name": "Participation", "weight": 15}
+    ]
+}</div>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-roster">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/classes/:section_id/roster</span>
+                        <span class="endpoint-desc">Full Roster</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.students</span> Returns complete roster with contact information.</p>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-scoring">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/classes/:section_id/scoring</span>
+                        <span class="endpoint-desc">Scoring Information</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.grades</span> Returns scoring configuration for a class.</p>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-all-students">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/classes/all/students</span>
+                        <span class="endpoint-desc">All Students</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.students</span> Returns all students across all classes.</p>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-search">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/search/students</span>
+                        <span class="endpoint-desc">Search Students</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.students</span> Search for students by name or ID.</p>
+                        <h4>Query Parameters</h4>
+                        <table class="param-table">
+                            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                            <tr><td>q</td><td>string</td><td>Search query (required)</td></tr>
+                            <tr><td>limit</td><td>integer</td><td>Max results (default: 20)</td></tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-student-detail">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/classes/:section_id/students/:student_id</span>
+                        <span class="endpoint-desc">Student Detail</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.students</span> Returns detailed information about a specific student.</p>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-student-schedule">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/students/:student_id/full-schedule</span>
+                        <span class="endpoint-desc">Student's Full Schedule</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.students</span> Returns a student's complete schedule.</p>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-student-grades">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/teacher/students/:student_id/all-grades</span>
+                        <span class="endpoint-desc">Student's All Grades</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.grades</span> Returns all grades for a student across classes.</p>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-scores">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-post">POST</span>
+                        <span class="endpoint-path">/api/v1/teacher/scores</span>
+                        <span class="endpoint-desc">Submit Score</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.grades</span> Submit a score for a student assignment.</p>
+                        <h4>Request Body</h4>
+                        <div class="code-block request">{
+    "student_id": 12345,
+    "assignment_id": 5432,
+    "score": 95,
+    "comment": "Excellent work!",
+    "late": false,
+    "exempt": false
+}</div>
+                        <h4>Response</h4>
+                        <div class="code-block response">{
+    "success": true,
+    "message": "Score saved successfully"
+}</div>
+                    </div>
+                </div>
+                
+                <div class="endpoint-card" id="teacher-scores-batch">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-post">POST</span>
+                        <span class="endpoint-path">/api/v1/teacher/scores/batch</span>
+                        <span class="endpoint-desc">Batch Submit Scores</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p><span class="scope-badge">teacher.grades</span> Submit multiple scores at once.</p>
+                        <h4>Request Body</h4>
+                        <div class="code-block request">{
+    "assignment_id": 5432,
+    "scores": [
+        {"student_id": 12345, "score": 95},
+        {"student_id": 12346, "score": 88},
+        {"student_id": 12347, "score": 92}
+    ]
+}</div>
+                        <h4>Response</h4>
+                        <div class="code-block response">{
+    "success": true,
+    "saved": 3,
+    "failed": 0,
+    "message": "All scores saved successfully"
+}</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 40px; padding: 20px; background: var(--win95-button-face); border: 2px solid; border-color: var(--win95-button-highlight) var(--win95-button-shadow) var(--win95-button-shadow) var(--win95-button-highlight); text-align: center;">
+                    <p><i class="fas fa-flask"></i> <strong>Ready to test?</strong> Try the <a href="/playground">Student Playground</a> or <a href="/playground/teachers">Teacher Playground</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="win95-taskbar">
+        <button class="win95-start-btn"><i class="fas fa-windows" style="color: #ff0000;"></i> Start</button>
+        <div class="win95-taskbar-items">
+            <div class="win95-taskbar-item" onclick="location.href='/developer/dashboard'"><i class="fas fa-server"></i> Dashboard</div>
+            <div class="win95-taskbar-item active"><i class="fas fa-book"></i> Docs</div>
+        </div>
+        <div class="win95-systray"><i class="fas fa-volume-up"></i> <span id="clock"></span></div>
+    </div>
+    
+    <script>
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+        
+        // Smooth scroll and active link
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        // Highlight nav on scroll
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('[id]');
+            let current = '';
+            sections.forEach(section => {
+                const rect = section.getBoundingClientRect();
+                if (rect.top <= 100) current = section.id;
+            });
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) link.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

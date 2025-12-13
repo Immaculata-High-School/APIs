@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth Playground - API Manager</title>
+    <link rel="stylesheet" href="/static/win95.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { padding-bottom: 32px; }
+        .layout { display: flex; gap: 8px; padding: 8px; min-height: calc(100vh - 40px); }
+        .sidebar { width: 200px; }
+        .main-area { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+        .tab-row { display: flex; gap: 2px; }
+        .tab-btn { padding: 6px 12px; background: var(--win95-button-face); border: 2px outset var(--win95-button-face); cursor: pointer; font-size: 11px; font-family: inherit; }
+        .tab-btn:hover { background: #e0e0e0; }
+        .tab-btn.active { background: var(--win95-input-bg); border-bottom-color: var(--win95-input-bg); position: relative; z-index: 1; }
+        .tab-btn i { margin-right: 4px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        @media (max-width: 1100px) { .cards-grid { grid-template-columns: 1fr; } }
+        .step-card { margin-bottom: 8px; }
+        .step-header { display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--win95-button-face); border-bottom: 1px solid var(--win95-button-shadow); }
+        .step-num { width: 22px; height: 22px; background: var(--win95-window-title); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; }
+        .step-num.green { background: #008000; }
+        .step-title { font-weight: bold; font-size: 12px; }
+        .step-badge { margin-left: auto; font-size: 9px; padding: 2px 6px; background: #ffffcc; border: 1px solid #808000; }
+        .step-badge.server { background: #ffcccc; border-color: #800000; }
+        .step-body { padding: 12px; background: var(--win95-input-bg); }
+        .form-row { margin-bottom: 10px; }
+        .form-row label { display: block; font-size: 11px; font-weight: bold; margin-bottom: 3px; }
+        .form-row input, .form-row select, .form-row textarea { width: 100%; font-size: 11px; }
+        .form-row textarea { height: 60px; font-family: 'Courier New', monospace; }
+        .hint { font-size: 10px; color: var(--win95-button-shadow); margin-top: 2px; }
+        .scope-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+        .scope-check { display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--win95-button-face); border: 1px solid var(--win95-button-shadow); cursor: pointer; font-size: 10px; }
+        .scope-check:hover { background: #e0e0e0; }
+        .scope-check input { margin: 0; }
+        .url-box { background: #000080; color: #00ff00; padding: 8px; font-family: 'Courier New', monospace; font-size: 10px; word-break: break-all; margin: 8px 0; display: none; }
+        .url-box .param { color: #ffff00; }
+        .url-box .value { color: #00ffff; }
+        .btn-row { display: flex; gap: 4px; margin-top: 8px; }
+        .btn-row .win95-btn { flex: 1; font-size: 11px; }
+        .response-box { margin-top: 12px; display: none; }
+        .response-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 11px; font-weight: bold; }
+        .status-badge { padding: 2px 8px; font-size: 10px; }
+        .status-badge.success { background: #90EE90; }
+        .status-badge.error { background: #FFB6C1; }
+        .code-output { background: #000; color: #0f0; padding: 8px; font-family: 'Courier New', monospace; font-size: 10px; max-height: 200px; overflow: auto; white-space: pre-wrap; }
+        .code-output .json-key { color: #ff6b6b; }
+        .code-output .json-string { color: #69db7c; }
+        .code-output .json-number { color: #74c0fc; }
+        .code-output .json-bool { color: #da77f2; }
+        .success-banner { background: #ccffcc; border: 2px solid #008000; padding: 8px; margin-bottom: 12px; display: none; font-size: 11px; }
+        .success-banner i { color: #008000; margin-right: 6px; }
+        .callback-box { background: #ffffcc; border: 1px solid #808000; padding: 8px; font-size: 11px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .callback-url { font-family: 'Courier New', monospace; font-size: 10px; flex: 1; word-break: break-all; }
+        .flow-indicator { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+        .flow-step { padding: 4px 8px; background: var(--win95-button-face); border: 1px solid var(--win95-button-shadow); font-size: 9px; opacity: 0.5; }
+        .flow-step.active { opacity: 1; background: var(--win95-window-title); color: white; border-color: var(--win95-window-title); }
+        .flow-step.active.green { background: #008000; border-color: #008000; }
+        .info-text { font-size: 11px; color: var(--win95-button-shadow); margin-bottom: 10px; line-height: 1.5; }
+        .info-text i { margin-right: 4px; }
+        .ref-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .ref-table th, .ref-table td { border: 1px solid var(--win95-button-shadow); padding: 6px 8px; text-align: left; }
+        .ref-table th { background: var(--win95-button-face); font-weight: bold; }
+        .ref-table code { background: #ffffcc; padding: 1px 4px; font-size: 10px; }
+        .code-example { background: #000080; color: #fff; padding: 12px; font-family: 'Courier New', monospace; font-size: 10px; overflow-x: auto; white-space: pre; margin-bottom: 8px; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+    </style>
+</head>
+<body>
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="win95-window" style="width: 320px;">
+            <div class="win95-title-bar">
+                <div class="win95-title"><i class="fas fa-exclamation-triangle"></i> <span id="modalTitle">Notice</span></div>
+                <div class="win95-title-buttons"><button class="win95-title-btn" onclick="closeModal()">×</button></div>
+            </div>
+            <div class="win95-content" style="text-align: center;">
+                <p id="modalMessage" style="margin-bottom: 16px;"></p>
+                <button class="win95-btn win95-btn-primary" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="layout">
+        <div class="win95-window sidebar">
+            <div class="win95-title-bar">
+                <div class="win95-title"><i class="fas fa-stream"></i> Flow</div>
+            </div>
+            <div style="padding: 8px;">
+                <div style="font-size: 10px; font-weight: bold; margin-bottom: 4px;">Student OAuth</div>
+                <div class="flow-indicator" id="studentFlow">
+                    <div class="flow-step" id="flow-1">1. Config</div>
+                    <div class="flow-step" id="flow-2">2. Auth URL</div>
+                    <div class="flow-step" id="flow-3">3. Redirect</div>
+                    <div class="flow-step" id="flow-4">4. Code</div>
+                    <div class="flow-step" id="flow-5">5. Token</div>
+                    <div class="flow-step" id="flow-6">6. API</div>
+                </div>
+                <div style="font-size: 10px; font-weight: bold; margin-bottom: 4px; margin-top: 12px;">Teacher OAuth</div>
+                <div class="flow-indicator" id="teacherFlow">
+                    <div class="flow-step" id="teacher-flow-1">1. Config</div>
+                    <div class="flow-step" id="teacher-flow-2">2. Auth URL</div>
+                    <div class="flow-step" id="teacher-flow-3">3. Redirect</div>
+                    <div class="flow-step" id="teacher-flow-4">4. Code</div>
+                    <div class="flow-step" id="teacher-flow-5">5. Token</div>
+                    <div class="flow-step" id="teacher-flow-6">6. API</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-area">
+            <div class="win95-window" style="flex: 1; display: flex; flex-direction: column;">
+                <div class="win95-title-bar">
+                    <div class="win95-title"><i class="fas fa-key"></i> OAuth 2.0 Playground</div>
+                    <div class="win95-title-buttons">
+                        <button class="win95-title-btn">−</button>
+                        <button class="win95-title-btn">□</button>
+                        <button class="win95-title-btn" onclick="location.href='/developer/dashboard'">×</button>
+                    </div>
+                </div>
+                <div class="win95-toolbar">
+                    <button class="win95-toolbar-btn" onclick="location.href='/developer/dashboard'" title="Dashboard"><i class="fas fa-home"></i></button>
+                    <button class="win95-toolbar-btn" onclick="location.href='/playground'" title="Student Playground"><i class="fas fa-flask"></i></button>
+                    <button class="win95-toolbar-btn" onclick="location.href='/playground/teachers'" title="Teacher Playground"><i class="fas fa-chalkboard-teacher"></i></button>
+                    <button class="win95-toolbar-btn" onclick="location.href='/docs'" title="Docs"><i class="fas fa-book"></i></button>
+                    <div style="flex:1;"></div>
+                    <button class="win95-toolbar-btn" onclick="location.href='/developer/logout'" title="Sign Out"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+                
+                <div class="tab-row" style="padding: 8px 8px 0;">
+                    <button class="tab-btn active" onclick="showSection('student')"><i class="fas fa-user-graduate"></i> Student OAuth</button>
+                    <button class="tab-btn" onclick="showSection('teacher')"><i class="fas fa-chalkboard-teacher"></i> Teacher OAuth</button>
+                    <button class="tab-btn" onclick="showSection('scopes')"><i class="fas fa-shield-alt"></i> Scopes</button>
+                    <button class="tab-btn" onclick="showSection('endpoints')"><i class="fas fa-plug"></i> Endpoints</button>
+                    <button class="tab-btn" onclick="showSection('code')"><i class="fas fa-code"></i> Examples</button>
+                </div>
+                
+                <div style="flex: 1; overflow-y: auto; padding: 8px;">
+                    <!-- STUDENT OAUTH SECTION -->
+                    <div class="tab-content active" id="student-section">
+                        <div class="callback-box">
+                            <i class="fas fa-link"></i>
+                            <span>Playground Callback URL:</span>
+                            <span class="callback-url" id="playgroundCallback"></span>
+                            <button class="win95-btn" onclick="copyCallback()"><i class="fas fa-copy"></i></button>
+                        </div>
+                        
+                        <div class="cards-grid">
+                            <div>
+                                <!-- Step 1 -->
+                                <div class="win95-window step-card">
+                                    <div class="step-header">
+                                        <span class="step-num">1</span>
+                                        <span class="step-title">Configure OAuth App</span>
+                                        <span class="step-badge">Setup</span>
+                                    </div>
+                                    <div class="step-body">
+                                        <div class="form-row">
+                                            <label><i class="fas fa-id-card"></i> Client ID</label>
+                                            <input type="text" id="clientId" class="win95-input" placeholder="app_xxxxxxxxxxxxxxxx">
+                                        </div>
+                                        <div class="form-row">
+                                            <label><i class="fas fa-key"></i> Client Secret</label>
+                                            <input type="password" id="clientSecret" class="win95-input" placeholder="secret_xxxxxxxxxxxxxxxx">
+                                        </div>
+                                        <div class="form-row">
+                                            <label><i class="fas fa-undo"></i> Redirect URI</label>
+                                            <input type="text" id="redirectUri" class="win95-input" placeholder="https://yourapp.com/callback">
+                                        </div>
+                                        <div class="form-row">
+                                            <label><i class="fas fa-shield-alt"></i> Scopes</label>
+                                            <div class="scope-grid" id="scopeCheckboxes">
+                                                <label class="scope-check"><input type="checkbox" value="profile" checked> profile</label>
+                                                <label class="scope-check"><input type="checkbox" value="grades"> grades</label>
+                                                <label class="scope-check"><input type="checkbox" value="schedule"> schedule</label>
+                                                <label class="scope-check"><input type="checkbox" value="attendance"> attendance</label>
+                                                <label class="scope-check"><input type="checkbox" value="assignments"> assignments</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Step 2 -->
+                                <div class="win95-window step-card">
+                                    <div class="step-header">
+                                        <span class="step-num">2</span>
+                                        <span class="step-title">Generate Authorization URL</span>
+                                        <span class="step-badge">Client-side</span>
+                                    </div>
+                                    <div class="step-body">
+                                        <p class="info-text"><i class="fas fa-info-circle"></i> Generate the URL to redirect users for PowerSchool login.</p>
+                                        <button class="win95-btn win95-btn-primary" onclick="generateAuthUrl()" style="width: 100%;"><i class="fas fa-wand-magic-sparkles"></i> Generate Auth URL</button>
+                                        <div class="url-box" id="authUrlPreview"><span id="authUrlDisplay"></span></div>
+                                        <div class="btn-row">
+                                            <button class="win95-btn" onclick="copyAuthUrl()" id="copyAuthBtn" style="display: none;"><i class="fas fa-copy"></i> Copy</button>
+                                            <button class="win95-btn" onclick="openAuthUrl()" id="openAuthBtn" style="display: none;"><i class="fas fa-external-link-alt"></i> Open</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <!-- Step 3 -->
+                                <div class="win95-window step-card">
+                                    <div class="step-header">
+                                        <span class="step-num">3</span>
+                                        <span class="step-title">Exchange Code for Tokens</span>
+                                        <span class="step-badge server">Server-side</span>
+                                    </div>
+                                    <div class="step-body">
+                                        <div class="success-banner" id="codeReceivedBanner"><i class="fas fa-check-circle"></i> Authorization code received!</div>
+                                        <p class="info-text"><i class="fas fa-info-circle"></i> Exchange the authorization code for access tokens.</p>
+                                        <div class="form-row">
+                                            <label><i class="fas fa-ticket"></i> Authorization Code</label>
+                                            <input type="text" id="authCode" class="win95-input" placeholder="code_xxxxxxxxxxxxxxxx">
+                                        </div>
+                                        <button class="win95-btn win95-btn-primary" onclick="exchangeCode()" style="width: 100%;"><i class="fas fa-exchange-alt"></i> Exchange for Tokens</button>
+                                        <div class="response-box" id="tokenResponse">
+                                            <div class="response-header"><i class="fas fa-reply"></i> Response <span class="status-badge" id="tokenStatus"></span></div>
+                                            <div class="code-output" id="tokenResponseBody"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Step 4 -->
+                                <div class="win95-window step-card">
+                                    <div class="step-header">
+                                        <span class="step-num">4</span>
+                                        <span class="step-title">Make API Requests</span>
+                                        <span class="step-badge">Access Data</span>
+                                    </div>
+                                    <div class="step-body">
+                                        <div class="form-row">
+                                            <label><i class="fas fa-key"></i> Access Token</label>
+                                            <input type="text" id="accessToken" class="win95-input" placeholder="at_xxxxxxxxxxxxxxxx">
+                                        </div>
+                                        <div class="form-row">
+                                            <label><i class="fas fa-plug"></i> Endpoint</label>
+                                            <select id="testEndpoint" class="win95-select">
+                                                <option value="/api/v1/me">/api/v1/me - Profile</option>
+                                                <option value="/api/v1/grades">/api/v1/grades - Grades</option>
+                                                <option value="/api/v1/schedule">/api/v1/schedule - Schedule</option>
+                                                <option value="/api/v1/courses">/api/v1/courses - Courses</option>
+                                                <option value="/api/v1/assignments">/api/v1/assignments - Assignments</option>
+                                                <option value="/api/v1/attendance">/api/v1/attendance - Attendance</option>
+                                            </select>
+                                        </div>
+                                        <button class="win95-btn win95-btn-primary" onclick="testApi()" style="width: 100%;"><i class="fas fa-paper-plane"></i> Send Request</button>
+                                        <div class="response-box" id="apiResponse">
+                                            <div class="response-header"><i class="fas fa-reply"></i> Response <span class="status-badge" id="apiStatus"></span></div>
+                                            <div class="code-output" id="apiResponseBody"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- TEACHER OAUTH SECTION -->
+                    <div class="tab-content" id="teacher-section">
+                        <div class="callback-box" style="background: #ccffcc; border-color: #008000;">
+                            <i class="fas fa-link" style="color: #008000;"></i>
+                            <span>Playground Callback URL:</span>
+                            <span class="callback-url" id="teacherPlaygroundCallback"></span>
+                            <button class="win95-btn" onclick="copyTeacherCallback()"><i class="fas fa-copy"></i></button>
+                        </div>
+                        
+                        <div class="cards-grid">
+                            <div>
+                                <!-- Teacher Step 1 -->
+                                <div class="win95-window step-card" style="border-top: 3px solid #008000;">
+                                    <div class="step-header">
+                                        <span class="step-num green">1</span>
+                                        <span class="step-title">Configure Teacher OAuth App</span>
+                                        <span class="step-badge" style="background: #ccffcc; border-color: #008000;">Setup</span>
+                                    </div>
+                                    <div class="step-body">
+                                        <div class="form-row">
+                                            <label><i class="fas fa-id-card"></i> Client ID</label>
+                                            <input type="text" id="teacherClientId" class="win95-input" placeholder="app_xxxxxxxxxxxxxxxx">
+                                        </div>
+                                        <div class="form-row">
+                                            <label><i class="fas fa-key"></i> Client Secret</label>
+                                            <input type="password" id="teacherClientSecret" class="win95-input" placeholder="secret_xxxxxxxxxxxxxxxx">
+                                        </div>
+                                        <div class="form-row">
+                                            <label><i class="fas fa-undo"></i> Redirect URI</label>
+                                            <input type="text" id="teacherRedirectUri" class="win95-input" placeholder="https://yourapp.com/callback">
+                                        </div>
+                                        <div class="form-row">
+                                            <label><i class="fas fa-shield-alt"></i> Teacher Scopes</label>
+                                            <div class="scope-grid" id="teacherScopeCheckboxes">
+                                                <label class="scope-check"><input type="checkbox" value="teacher.profile" checked> teacher.profile</label>
+                                                <label class="scope-check"><input type="checkbox" value="teacher.classes"> teacher.classes</label>
+                                                <label class="scope-check"><input type="checkbox" value="teacher.students"> teacher.students</label>
+                                                <label class="scope-check"><input type="checkbox" value="teacher.grades"> teacher.grades</label>
+                                                <label class="scope-check"><input type="checkbox" value="teacher.assignments"> teacher.assignments</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Teacher Step 2 -->
+                                <div class="win95-window step-card" style="border-top: 3px solid #008000;">
+                                    <div class="step-header">
+                                        <span class="step-num green">2</span>
+                                        <span class="step-title">Generate Teacher Auth URL</span>
+                                        <span class="step-badge" style="background: #ccffcc; border-color: #008000;">Client-side</span>
+                                    </div>
+                                    <div class="step-body">
+                                        <p class="info-text"><i class="fas fa-info-circle"></i> Teachers log in with PowerTeacher credentials.</p>
+                                        <button class="win95-btn" onclick="generateTeacherAuthUrl()" style="width: 100%; background: #c0ffc0;"><i class="fas fa-wand-magic-sparkles"></i> Generate Teacher Auth URL</button>
+                                        <div class="url-box" id="teacherAuthUrlPreview" style="background: #004000;"><span id="teacherAuthUrlDisplay"></span></div>
+                                        <div class="btn-row">
+                                            <button class="win95-btn" onclick="copyTeacherAuthUrl()" id="copyTeacherAuthBtn" style="display: none;"><i class="fas fa-copy"></i> Copy</button>
+                                            <button class="win95-btn" onclick="openTeacherAuthUrl()" id="openTeacherAuthBtn" style="display: none;"><i class="fas fa-external-link-alt"></i> Open</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <!-- Teacher Step 3 -->
+                                <div class="win95-window step-card" style="border-top: 3px solid #008000;">
+                                    <div class="step-header">
+                                        <span class="step-num green">3</span>
+                                        <span class="step-title">Exchange Teacher Code</span>
+                                        <span class="step-badge server">Server-side</span>
+                                    </div>
+                                    <div class="step-body">
+                                        <div class="success-banner" id="teacherCodeReceivedBanner" style="background: #ccffcc; border-color: #008000;"><i class="fas fa-check-circle" style="color: #008000;"></i> Teacher auth code received!</div>
+                                        <div class="form-row">
+                                            <label><i class="fas fa-ticket"></i> Authorization Code</label>
+                                            <input type="text" id="teacherAuthCode" class="win95-input" placeholder="code_xxxxxxxxxxxxxxxx">
+                                        </div>
+                                        <button class="win95-btn" onclick="exchangeTeacherCode()" style="width: 100%; background: #c0ffc0;"><i class="fas fa-exchange-alt"></i> Exchange for Teacher Tokens</button>
+                                        <div class="response-box" id="teacherTokenResponse">
+                                            <div class="response-header"><i class="fas fa-reply"></i> Response <span class="status-badge" id="teacherTokenStatus"></span></div>
+                                            <div class="code-output" id="teacherTokenResponseBody"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Teacher Step 4 -->
+                                <div class="win95-window step-card" style="border-top: 3px solid #008000;">
+                                    <div class="step-header">
+                                        <span class="step-num green">4</span>
+                                        <span class="step-title">Make Teacher API Requests</span>
+                                        <span class="step-badge" style="background: #ccffcc; border-color: #008000;">Access Data</span>
+                                    </div>
+                                    <div class="step-body">
+                                        <div class="form-row">
+                                            <label><i class="fas fa-key"></i> Teacher Access Token</label>
+                                            <input type="text" id="teacherAccessToken" class="win95-input" placeholder="tat_xxxxxxxxxxxxxxxx">
+                                        </div>
+                                        <div class="form-row">
+                                            <label><i class="fas fa-plug"></i> Endpoint</label>
+                                            <select id="teacherTestEndpoint" class="win95-select">
+                                                <option value="/api/v1/teacher/me">/api/v1/teacher/me - Profile</option>
+                                                <option value="/api/v1/teacher/classes">/api/v1/teacher/classes - Classes</option>
+                                                <option value="/api/v1/teacher/categories">/api/v1/teacher/categories - Categories</option>
+                                                <option value="/api/v1/teacher/classes/all/students">/api/v1/teacher/classes/all/students</option>
+                                            </select>
+                                        </div>
+                                        <button class="win95-btn" onclick="testTeacherApi()" style="width: 100%; background: #c0ffc0;"><i class="fas fa-paper-plane"></i> Send Request</button>
+                                        <div class="response-box" id="teacherApiResponse">
+                                            <div class="response-header"><i class="fas fa-reply"></i> Response <span class="status-badge" id="teacherApiStatus"></span></div>
+                                            <div class="code-output" id="teacherApiResponseBody"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- SCOPES SECTION -->
+                    <div class="tab-content" id="scopes-section">
+                        <div class="win95-window">
+                            <div class="win95-title-bar" style="background: var(--win95-window-title);">
+                                <div class="win95-title"><i class="fas fa-user-graduate"></i> Student Scopes</div>
+                            </div>
+                            <div style="padding: 12px;">
+                                <table class="ref-table">
+                                    <tr><th>Scope</th><th>Description</th><th>Endpoints</th></tr>
+                                    <tr><td><code>profile</code></td><td>Basic student information</td><td>/api/v1/me, /api/v1/courses</td></tr>
+                                    <tr><td><code>grades</code></td><td>Current grades and GPA</td><td>/api/v1/grades, /api/v1/grades/summary</td></tr>
+                                    <tr><td><code>schedule</code></td><td>Class schedule</td><td>/api/v1/schedule</td></tr>
+                                    <tr><td><code>attendance</code></td><td>Attendance records</td><td>/api/v1/attendance</td></tr>
+                                    <tr><td><code>assignments</code></td><td>Assignment details</td><td>/api/v1/assignments, /api/v1/courses/:id/assignments</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="win95-window" style="margin-top: 8px;">
+                            <div class="win95-title-bar" style="background: linear-gradient(90deg, #008000, #00a000);">
+                                <div class="win95-title"><i class="fas fa-chalkboard-teacher"></i> Teacher Scopes</div>
+                            </div>
+                            <div style="padding: 12px;">
+                                <table class="ref-table">
+                                    <tr><th>Scope</th><th>Description</th><th>Endpoints</th></tr>
+                                    <tr><td><code>teacher.profile</code></td><td>Teacher information</td><td>/api/v1/teacher/me</td></tr>
+                                    <tr><td><code>teacher.classes</code></td><td>Classes taught</td><td>/api/v1/teacher/classes</td></tr>
+                                    <tr><td><code>teacher.students</code></td><td>Student rosters</td><td>/api/v1/teacher/classes/:id/students</td></tr>
+                                    <tr><td><code>teacher.grades</code></td><td>View/manage grades</td><td>/api/v1/teacher/classes/:id/grades, /api/v1/teacher/scores</td></tr>
+                                    <tr><td><code>teacher.assignments</code></td><td>Manage assignments</td><td>/api/v1/teacher/classes/:id/assignments</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ENDPOINTS SECTION -->
+                    <div class="tab-content" id="endpoints-section">
+                        <div class="win95-window">
+                            <div class="win95-title-bar">
+                                <div class="win95-title"><i class="fas fa-route"></i> OAuth Endpoints</div>
+                            </div>
+                            <div style="padding: 12px;">
+                                <table class="ref-table">
+                                    <tr><th>Endpoint</th><th>Method</th><th>Description</th></tr>
+                                    <tr><td><code>/oauth/authorize</code></td><td>GET</td><td>Student authorization page</td></tr>
+                                    <tr><td><code>/oauth/token</code></td><td>POST</td><td>Exchange code for student tokens</td></tr>
+                                    <tr><td><code>/oauth/teacher/authorize</code></td><td>GET</td><td>Teacher authorization page</td></tr>
+                                    <tr><td><code>/oauth/teacher/token</code></td><td>POST</td><td>Exchange code for teacher tokens</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="win95-window" style="margin-top: 8px;">
+                            <div class="win95-title-bar">
+                                <div class="win95-title"><i class="fas fa-cog"></i> Token Endpoint Parameters</div>
+                            </div>
+                            <div style="padding: 12px;">
+                                <table class="ref-table">
+                                    <tr><th>Parameter</th><th>Value</th></tr>
+                                    <tr><td><code>grant_type</code></td><td>authorization_code or refresh_token</td></tr>
+                                    <tr><td><code>code</code></td><td>Authorization code from callback</td></tr>
+                                    <tr><td><code>client_id</code></td><td>Your application's client ID</td></tr>
+                                    <tr><td><code>client_secret</code></td><td>Your application's client secret</td></tr>
+                                    <tr><td><code>redirect_uri</code></td><td>Must match the registered redirect URI</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- CODE EXAMPLES SECTION -->
+                    <div class="tab-content" id="code-section">
+                        <div class="win95-window">
+                            <div class="win95-title-bar">
+                                <div class="win95-title"><i class="fab fa-js"></i> JavaScript Example</div>
+                            </div>
+                            <div style="padding: 12px;">
+                                <div class="code-example">// Step 1: Build authorization URL
+const authUrl = new URL('/oauth/authorize', window.location.origin);
+authUrl.searchParams.set('client_id', 'YOUR_CLIENT_ID');
+authUrl.searchParams.set('redirect_uri', 'https://yourapp.com/callback');
+authUrl.searchParams.set('scope', 'profile grades');
+authUrl.searchParams.set('response_type', 'code');
+window.location.href = authUrl.toString();
+
+// Step 2: Exchange code for token (server-side)
+const response = await fetch('/oauth/token', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: new URLSearchParams({
+    grant_type: 'authorization_code',
+    code: 'CODE_FROM_CALLBACK',
+    client_id: 'YOUR_CLIENT_ID',
+    client_secret: 'YOUR_CLIENT_SECRET',
+    redirect_uri: 'https://yourapp.com/callback'
+  })
+});
+const tokens = await response.json();
+
+// Step 3: Use access token
+const grades = await fetch('/api/v1/grades', {
+  headers: { 'Authorization': `Bearer ${tokens.access_token}` }
+});
+console.log(await grades.json());</div>
+                            </div>
+                        </div>
+                        
+                        <div class="win95-window" style="margin-top: 8px;">
+                            <div class="win95-title-bar">
+                                <div class="win95-title"><i class="fab fa-python"></i> Python Example</div>
+                            </div>
+                            <div style="padding: 12px;">
+                                <div class="code-example">import requests
+from urllib.parse import urlencode
+
+# Step 1: Build authorization URL
+auth_params = {
+    'client_id': 'YOUR_CLIENT_ID',
+    'redirect_uri': 'https://yourapp.com/callback',
+    'scope': 'profile grades',
+    'response_type': 'code'
+}
+auth_url = f"/oauth/authorize?{urlencode(auth_params)}"
+
+# Step 2: Exchange code for token
+token_response = requests.post('/oauth/token', data={
+    'grant_type': 'authorization_code',
+    'code': 'CODE_FROM_CALLBACK',
+    'client_id': 'YOUR_CLIENT_ID',
+    'client_secret': 'YOUR_CLIENT_SECRET',
+    'redirect_uri': 'https://yourapp.com/callback'
+})
+tokens = token_response.json()
+
+# Step 3: Use access token
+headers = {'Authorization': f"Bearer {tokens['access_token']}"}
+grades = requests.get('/api/v1/grades', headers=headers)
+print(grades.json())</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="win95-taskbar">
+        <button class="win95-start-btn"><i class="fas fa-windows" style="color: #ff0000;"></i> Start</button>
+        <div class="win95-taskbar-items">
+            <div class="win95-taskbar-item" onclick="location.href='/developer/dashboard'"><i class="fas fa-server"></i> Dashboard</div>
+            <div class="win95-taskbar-item active"><i class="fas fa-key"></i> OAuth</div>
+        </div>
+        <div class="win95-systray"><i class="fas fa-volume-up"></i> <span id="clock"></span></div>
+    </div>
+    <script>
+        let generatedState = '';
+        let generatedAuthUrl = '';
+        let teacherGeneratedState = '';
+        let teacherGeneratedAuthUrl = '';
+        const playgroundCallbackUrl = window.location.origin + '/oauth-playground/callback';
+        
+        // Initialize
+        document.getElementById('playgroundCallback').textContent = playgroundCallbackUrl;
+        document.getElementById('redirectUri').value = playgroundCallbackUrl;
+        document.getElementById('teacherPlaygroundCallback').textContent = playgroundCallbackUrl;
+        document.getElementById('teacherRedirectUri').value = playgroundCallbackUrl;
+        
+        // Check for code in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('code')) {
+            document.getElementById('authCode').value = urlParams.get('code');
+            document.getElementById('codeReceivedBanner').style.display = 'block';
+            document.getElementById('teacherAuthCode').value = urlParams.get('code');
+            document.getElementById('teacherCodeReceivedBanner').style.display = 'block';
+            highlightFlowStep(4);
+            highlightTeacherFlowStep(4);
+        }
+        
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+        
+        function showModal(title, message) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+        
+        function showSection(section) {
+            document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            ['student', 'teacher', 'scopes', 'endpoints', 'code'].forEach(s => {
+                document.getElementById(s + '-section').style.display = s === section ? 'block' : 'none';
+            });
+        }
+        
+        function copyCallback() {
+            navigator.clipboard.writeText(playgroundCallbackUrl);
+            showModal('Copied', 'Callback URL copied to clipboard');
+        }
+        
+        function copyTeacherCallback() {
+            navigator.clipboard.writeText(playgroundCallbackUrl);
+            showModal('Copied', 'Callback URL copied to clipboard');
+        }
+        
+        function generateAuthUrl() {
+            const clientId = document.getElementById('clientId').value;
+            const redirectUri = document.getElementById('redirectUri').value;
+            if (!clientId || !redirectUri) {
+                showModal('Missing Info', 'Please enter Client ID and Redirect URI');
+                return;
+            }
+            const scopes = [];
+            document.querySelectorAll('#scopeCheckboxes input:checked').forEach(cb => scopes.push(cb.value));
+            generatedState = 'state_' + Math.random().toString(36).substring(7);
+            const params = new URLSearchParams({
+                client_id: clientId, redirect_uri: redirectUri, scope: scopes.join(' '),
+                response_type: 'code', state: generatedState
+            });
+            generatedAuthUrl = window.location.origin + '/oauth/authorize?' + params.toString();
+            document.getElementById('authUrlDisplay').innerHTML = generatedAuthUrl.replace(/([?&])([^=]+)=([^&]*)/g, '$1<span class="param">$2</span>=<span class="value">$3</span>');
+            document.getElementById('authUrlPreview').style.display = 'block';
+            document.getElementById('copyAuthBtn').style.display = 'inline-flex';
+            document.getElementById('openAuthBtn').style.display = 'inline-flex';
+            highlightFlowStep(2);
+        }
+        
+        function copyAuthUrl() {
+            navigator.clipboard.writeText(generatedAuthUrl);
+            showModal('Copied', 'Auth URL copied to clipboard');
+        }
+        
+        function openAuthUrl() {
+            window.open(generatedAuthUrl, '_blank');
+            highlightFlowStep(3);
+        }
+        
+        async function exchangeCode() {
+            const code = document.getElementById('authCode').value;
+            const clientId = document.getElementById('clientId').value;
+            const clientSecret = document.getElementById('clientSecret').value;
+            const redirectUri = document.getElementById('redirectUri').value;
+            if (!code || !clientId || !clientSecret || !redirectUri) {
+                showModal('Missing Info', 'Please fill in all fields');
+                return;
+            }
+            highlightFlowStep(5);
+            try {
+                const response = await fetch('/oauth/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        grant_type: 'authorization_code', code: code, client_id: clientId,
+                        client_secret: clientSecret, redirect_uri: redirectUri
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('tokenResponse').style.display = 'block';
+                document.getElementById('tokenStatus').textContent = response.status;
+                document.getElementById('tokenStatus').className = 'status-badge ' + (response.ok ? 'success' : 'error');
+                document.getElementById('tokenResponseBody').innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+                if (data.access_token) {
+                    document.getElementById('accessToken').value = data.access_token;
+                    highlightFlowStep(6);
+                }
+            } catch (e) {
+                document.getElementById('tokenResponse').style.display = 'block';
+                document.getElementById('tokenStatus').textContent = 'Error';
+                document.getElementById('tokenStatus').className = 'status-badge error';
+                document.getElementById('tokenResponseBody').textContent = e.message;
+            }
+        }
+        
+        async function testApi() {
+            const token = document.getElementById('accessToken').value;
+            const endpoint = document.getElementById('testEndpoint').value;
+            if (!token) { showModal('Missing Token', 'Please enter an access token'); return; }
+            try {
+                const response = await fetch(endpoint, { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await response.json();
+                document.getElementById('apiResponse').style.display = 'block';
+                document.getElementById('apiStatus').textContent = response.status;
+                document.getElementById('apiStatus').className = 'status-badge ' + (response.ok ? 'success' : 'error');
+                document.getElementById('apiResponseBody').innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+            } catch (e) {
+                document.getElementById('apiResponse').style.display = 'block';
+                document.getElementById('apiStatus').textContent = 'Error';
+                document.getElementById('apiStatus').className = 'status-badge error';
+                document.getElementById('apiResponseBody').textContent = e.message;
+            }
+        }
+        
+        function highlightFlowStep(step) {
+            for (let i = 1; i <= 6; i++) {
+                const el = document.getElementById('flow-' + i);
+                if (el) el.classList.toggle('active', i <= step);
+            }
+        }
+        
+        function highlightTeacherFlowStep(step) {
+            for (let i = 1; i <= 6; i++) {
+                const el = document.getElementById('teacher-flow-' + i);
+                if (el) { el.classList.toggle('active', i <= step); if (i <= step) el.classList.add('green'); }
+            }
+        }
+        
+        // Teacher OAuth Functions
+        function generateTeacherAuthUrl() {
+            const clientId = document.getElementById('teacherClientId').value;
+            const redirectUri = document.getElementById('teacherRedirectUri').value;
+            if (!clientId || !redirectUri) { showModal('Missing Info', 'Please enter Client ID and Redirect URI'); return; }
+            const scopes = [];
+            document.querySelectorAll('#teacherScopeCheckboxes input:checked').forEach(cb => scopes.push(cb.value));
+            teacherGeneratedState = 'state_' + Math.random().toString(36).substring(7);
+            const params = new URLSearchParams({
+                client_id: clientId, redirect_uri: redirectUri, scope: scopes.join(' '),
+                response_type: 'code', state: teacherGeneratedState
+            });
+            teacherGeneratedAuthUrl = window.location.origin + '/oauth/teacher/authorize?' + params.toString();
+            document.getElementById('teacherAuthUrlDisplay').innerHTML = teacherGeneratedAuthUrl.replace(/([?&])([^=]+)=([^&]*)/g, '$1<span class="param">$2</span>=<span class="value">$3</span>');
+            document.getElementById('teacherAuthUrlPreview').style.display = 'block';
+            document.getElementById('copyTeacherAuthBtn').style.display = 'inline-flex';
+            document.getElementById('openTeacherAuthBtn').style.display = 'inline-flex';
+            highlightTeacherFlowStep(2);
+        }
+        
+        function copyTeacherAuthUrl() {
+            navigator.clipboard.writeText(teacherGeneratedAuthUrl);
+            showModal('Copied', 'Teacher Auth URL copied to clipboard');
+        }
+        
+        function openTeacherAuthUrl() {
+            window.open(teacherGeneratedAuthUrl, '_blank');
+            highlightTeacherFlowStep(3);
+        }
+        
+        async function exchangeTeacherCode() {
+            const code = document.getElementById('teacherAuthCode').value;
+            const clientId = document.getElementById('teacherClientId').value;
+            const clientSecret = document.getElementById('teacherClientSecret').value;
+            const redirectUri = document.getElementById('teacherRedirectUri').value;
+            if (!code || !clientId || !clientSecret || !redirectUri) { showModal('Missing Info', 'Please fill in all fields'); return; }
+            highlightTeacherFlowStep(5);
+            try {
+                const response = await fetch('/oauth/teacher/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        grant_type: 'authorization_code', code: code, client_id: clientId,
+                        client_secret: clientSecret, redirect_uri: redirectUri
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('teacherTokenResponse').style.display = 'block';
+                document.getElementById('teacherTokenStatus').textContent = response.status;
+                document.getElementById('teacherTokenStatus').className = 'status-badge ' + (response.ok ? 'success' : 'error');
+                document.getElementById('teacherTokenResponseBody').innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+                if (data.access_token) {
+                    document.getElementById('teacherAccessToken').value = data.access_token;
+                    highlightTeacherFlowStep(6);
+                }
+            } catch (e) {
+                document.getElementById('teacherTokenResponse').style.display = 'block';
+                document.getElementById('teacherTokenStatus').textContent = 'Error';
+                document.getElementById('teacherTokenStatus').className = 'status-badge error';
+                document.getElementById('teacherTokenResponseBody').textContent = e.message;
+            }
+        }
+        
+        async function testTeacherApi() {
+            const token = document.getElementById('teacherAccessToken').value;
+            const endpoint = document.getElementById('teacherTestEndpoint').value;
+            if (!token) { showModal('Missing Token', 'Please enter a teacher access token'); return; }
+            try {
+                const response = await fetch(endpoint, { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await response.json();
+                document.getElementById('teacherApiResponse').style.display = 'block';
+                document.getElementById('teacherApiStatus').textContent = response.status;
+                document.getElementById('teacherApiStatus').className = 'status-badge ' + (response.ok ? 'success' : 'error');
+                document.getElementById('teacherApiResponseBody').innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+            } catch (e) {
+                document.getElementById('teacherApiResponse').style.display = 'block';
+                document.getElementById('teacherApiStatus').textContent = 'Error';
+                document.getElementById('teacherApiStatus').className = 'status-badge error';
+                document.getElementById('teacherApiResponseBody').textContent = e.message;
+            }
+        }
+        
+        function syntaxHighlight(json) {
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'json-number';
+                if (/^"/.test(match)) { cls = /:$/.test(match) ? 'json-key' : 'json-string'; }
+                else if (/true|false/.test(match)) { cls = 'json-bool'; }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+    </script>
+</body>
+</html>

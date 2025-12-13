@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Application - API Manager</title>
+    <link rel="stylesheet" href="/static/win95.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { padding: 20px; padding-bottom: 40px; }
+        .form-window { max-width: 550px; margin: 0 auto; }
+        .form-field { margin-bottom: 12px; }
+        .form-field label { display: block; margin-bottom: 4px; font-weight: bold; }
+        .form-field input[type="text"], .form-field textarea { width: 100%; }
+        .form-field textarea { height: 60px; font-family: inherit; }
+        .hint { font-size: 10px; color: var(--win95-button-shadow); margin-top: 2px; }
+        .type-selector { display: flex; gap: 8px; margin-bottom: 16px; }
+        .type-option {
+            flex: 1; padding: 12px; text-align: center; cursor: pointer;
+            border: 2px solid var(--win95-button-shadow);
+            background: var(--win95-button-face);
+        }
+        .type-option:hover { background: #e0e0e0; }
+        .type-option.selected { border-color: var(--win95-window-title); background: #cce0ff; }
+        .type-option input[type="radio"] { display: none; }
+        .type-option i { font-size: 24px; margin-bottom: 4px; display: block; }
+        .scope-list { max-height: 180px; overflow-y: auto; border: 2px solid; border-color: var(--win95-button-shadow) var(--win95-button-highlight) var(--win95-button-highlight) var(--win95-button-shadow); background: var(--win95-input-bg); }
+        .scope-item { padding: 6px 8px; display: flex; align-items: flex-start; gap: 8px; border-bottom: 1px solid #ddd; cursor: pointer; }
+        .scope-item:hover { background: #e8e8e8; }
+        .scope-item:last-child { border-bottom: none; }
+        .scope-item input { margin: 2px 0 0 0; }
+        .scope-name { font-weight: bold; font-size: 11px; }
+        .scope-desc { font-size: 10px; color: var(--win95-button-shadow); }
+        .checkbox-field { display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--win95-button-face); margin-bottom: 8px; border: 1px solid var(--win95-button-shadow); }
+        .checkbox-field input { margin: 0; }
+        .checkbox-field label { margin: 0; font-weight: normal; }
+        .section-header { font-weight: bold; margin: 16px 0 8px; padding: 4px 8px; background: var(--win95-button-face); border-bottom: 1px solid var(--win95-button-shadow); }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+    </style>
+</head>
+<body>
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="win95-window" style="width: 300px;">
+            <div class="win95-title-bar">
+                <div class="win95-title"><i class="fas fa-exclamation-triangle"></i> <span id="modalTitle">Alert</span></div>
+                <div class="win95-title-buttons"><button class="win95-title-btn" onclick="closeModal()">×</button></div>
+            </div>
+            <div class="win95-content" style="text-align: center;">
+                <p id="modalMessage" style="margin-bottom: 16px;"></p>
+                <button class="win95-btn win95-btn-primary" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="win95-window form-window">
+        <div class="win95-title-bar">
+            <div class="win95-title"><i class="fas fa-plus-circle"></i> Create New Application</div>
+            <div class="win95-title-buttons">
+                <button class="win95-title-btn" onclick="location.href='/developer/dashboard'">×</button>
+            </div>
+        </div>
+        <div class="win95-content">
+            <form method="POST" onsubmit="return validateForm()">
+                <div class="form-field">
+                    <label>Application Name:</label>
+                    <input type="text" name="name" id="appName" class="win95-input" required placeholder="My Cool App">
+                </div>
+                
+                <div class="section-header"><i class="fas fa-user-tag"></i> Application Type</div>
+                <div class="type-selector">
+                    <label class="type-option selected" onclick="selectType('student', this)">
+                        <input type="radio" name="app_type" value="student" checked>
+                        <i class="fas fa-user-graduate"></i>
+                        <div><strong>Student</strong></div>
+                        <div style="font-size: 10px; color: #666;">Access student data</div>
+                    </label>
+                    <label class="type-option" onclick="selectType('teacher', this)">
+                        <input type="radio" name="app_type" value="teacher">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        <div><strong>Teacher</strong></div>
+                        <div style="font-size: 10px; color: #666;">Access teacher data</div>
+                    </label>
+                </div>
+                
+                <div class="form-field">
+                    <label>Redirect URIs:</label>
+                    <textarea name="redirect_uris" id="redirectUris" class="win95-input" required placeholder="https://yourapp.com/callback&#10;http://localhost:3000/callback"></textarea>
+                    <div class="hint">One per line. URLs users will be redirected to after authorization.</div>
+                </div>
+                
+                <div class="section-header"><i class="fas fa-shield-alt"></i> Scopes (Student)</div>
+                <div class="scope-list" id="studentScopes">
+                    {% for scope, desc in scopes.items() if not scope.startswith('teacher.') %}
+                    <label class="scope-item">
+                        <input type="checkbox" name="scopes" value="{{ scope }}" {% if scope == 'profile' %}checked{% endif %}>
+                        <div>
+                            <div class="scope-name">{{ scope }}</div>
+                            <div class="scope-desc">{{ desc }}</div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+                
+                <div class="section-header" style="margin-top: 12px;"><i class="fas fa-shield-alt"></i> Scopes (Teacher)</div>
+                <div class="scope-list" id="teacherScopes">
+                    {% for scope, desc in scopes.items() if scope.startswith('teacher.') %}
+                    <label class="scope-item">
+                        <input type="checkbox" name="scopes" value="{{ scope }}">
+                        <div>
+                            <div class="scope-name">{{ scope }}</div>
+                            <div class="scope-desc">{{ desc }}</div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+                
+                <div class="section-header"><i class="fas fa-cog"></i> Advanced Options</div>
+                <div class="checkbox-field">
+                    <input type="checkbox" name="verified" id="verified">
+                    <label for="verified"><i class="fas fa-check-circle" style="color: #008000;"></i> Show as Verified App (displays badge on OAuth screen)</label>
+                </div>
+                <div class="checkbox-field">
+                    <input type="checkbox" name="hide_permissions" id="hidePermissions">
+                    <label for="hidePermissions"><i class="fas fa-eye-slash"></i> Hide Permissions List (don't show scope list on OAuth screen)</label>
+                </div>
+                
+                <div class="win95-dialog-buttons">
+                    <button type="button" class="win95-btn" onclick="location.href='/developer/dashboard'">Cancel</button>
+                    <button type="submit" class="win95-btn win95-btn-primary"><i class="fas fa-plus"></i> Create Application</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="win95-taskbar">
+        <button class="win95-start-btn"><i class="fas fa-windows" style="color: #ff0000;"></i> Start</button>
+        <div class="win95-taskbar-items">
+            <div class="win95-taskbar-item" onclick="location.href='/developer/dashboard'"><i class="fas fa-server"></i> Dashboard</div>
+            <div class="win95-taskbar-item active"><i class="fas fa-plus"></i> New App</div>
+        </div>
+        <div class="win95-systray"><i class="fas fa-volume-up"></i> <span id="clock"></span></div>
+    </div>
+    
+    <script>
+        function selectType(type, el) {
+            document.querySelectorAll('.type-option').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+            
+            // Show/hide appropriate scopes
+            const studentScopes = document.getElementById('studentScopes');
+            const teacherScopes = document.getElementById('teacherScopes');
+            
+            if (type === 'student') {
+                studentScopes.style.display = 'block';
+                studentScopes.previousElementSibling.style.display = 'block';
+                teacherScopes.style.display = 'none';
+                teacherScopes.previousElementSibling.style.display = 'none';
+                // Uncheck teacher scopes
+                teacherScopes.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            } else {
+                studentScopes.style.display = 'none';
+                studentScopes.previousElementSibling.style.display = 'none';
+                teacherScopes.style.display = 'block';
+                teacherScopes.previousElementSibling.style.display = 'block';
+                // Uncheck student scopes
+                studentScopes.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            }
+        }
+        
+        // Initialize - hide teacher scopes by default
+        document.getElementById('teacherScopes').style.display = 'none';
+        document.getElementById('teacherScopes').previousElementSibling.style.display = 'none';
+        
+        function showModal(title, message) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+        
+        function validateForm() {
+            const name = document.getElementById('appName').value.trim();
+            const redirects = document.getElementById('redirectUris').value.trim();
+            const checkedScopes = document.querySelectorAll('input[name="scopes"]:checked');
+            
+            if (!name) {
+                showModal('Validation Error', 'Please enter an application name.');
+                return false;
+            }
+            if (!redirects) {
+                showModal('Validation Error', 'Please enter at least one redirect URI.');
+                return false;
+            }
+            if (checkedScopes.length === 0) {
+                showModal('Validation Error', 'Please select at least one scope.');
+                return false;
+            }
+            return true;
+        }
+        
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>

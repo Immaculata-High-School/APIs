@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - API Manager</title>
+    <link rel="stylesheet" href="/static/win95.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--win95-bg);
+        }
+        .register-window {
+            width: 380px;
+        }
+        .register-icon {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .register-icon i {
+            font-size: 48px;
+            color: var(--win95-window-title);
+        }
+        .register-text {
+            text-align: center;
+            margin-bottom: 16px;
+            font-size: 11px;
+        }
+        .form-field {
+            margin-bottom: 10px;
+        }
+        .form-field label {
+            display: block;
+            margin-bottom: 4px;
+        }
+        .form-field input {
+            width: 100%;
+        }
+        .hint {
+            font-size: 10px;
+            color: var(--win95-button-shadow);
+            margin-top: 2px;
+        }
+        .error-box {
+            background: #fff0f0;
+            border: 1px solid #800000;
+            padding: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .error-box i {
+            color: #800000;
+            font-size: 16px;
+        }
+        .links {
+            text-align: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--win95-button-shadow);
+        }
+        .links a {
+            color: var(--win95-window-title);
+            text-decoration: underline;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="win95-window register-window">
+        <div class="win95-title-bar">
+            <div class="win95-title">
+                <i class="fas fa-user-plus"></i>
+                Create Account - API Manager
+            </div>
+            <div class="win95-title-buttons">
+                <button class="win95-title-btn">×</button>
+            </div>
+        </div>
+        <div class="win95-content">
+            <div class="register-icon">
+                <i class="fas fa-id-card"></i>
+            </div>
+            <div class="register-text">
+                Enter your invite code and details to create an account.
+            </div>
+            
+            {% if error %}
+            <div class="error-box">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+            
+            <form method="POST">
+                <div class="form-field">
+                    <label for="invite_code">Invite Code:</label>
+                    <input type="text" name="invite_code" id="invite_code" class="win95-input" required>
+                    <div class="hint">Contact an admin to get an invite code</div>
+                </div>
+                <div class="form-field">
+                    <label for="name">Your Name:</label>
+                    <input type="text" name="name" id="name" class="win95-input" required>
+                </div>
+                <div class="form-field">
+                    <label for="email">Email:</label>
+                    <input type="email" name="email" id="email" class="win95-input" required>
+                </div>
+                <div class="form-field">
+                    <label for="password">Password:</label>
+                    <input type="password" name="password" id="password" class="win95-input" required minlength="6">
+                    <div class="hint">Minimum 6 characters</div>
+                </div>
+                <div class="win95-dialog-buttons" style="border: none; padding-top: 8px; margin-top: 8px;">
+                    <button type="submit" class="win95-btn win95-btn-primary">
+                        <i class="fas fa-user-plus"></i> Create Account
+                    </button>
+                </div>
+            </form>
+            
+            <div class="links">
+                <a href="/developer/login">Already have an account? Sign in</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

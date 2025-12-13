@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Account - PowerSchool API</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --primary-glow: rgba(99, 102, 241, 0.4);
+            --secondary: #0ea5e9;
+            --accent: #8b5cf6;
+            --surface: rgba(255, 255, 255, 0.95);
+            --surface-hover: rgba(255, 255, 255, 1);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --border: rgba(148, 163, 184, 0.2);
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 50%, #ddd6fe 100%);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background elements */
+        .bg-pattern {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 40% 60%, rgba(14, 165, 233, 0.08) 0%, transparent 40%);
+            pointer-events: none;
+        }
+
+        .floating-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.6;
+            animation: float 20s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #a5b4fc, #c4b5fd);
+            top: -100px;
+            right: -100px;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #93c5fd, #a5b4fc);
+            bottom: -50px;
+            left: -50px;
+            animation-delay: -7s;
+        }
+
+        .orb-3 {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #c4b5fd, #93c5fd);
+            top: 50%;
+            left: 50%;
+            animation-delay: -14s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(30px, -30px) rotate(5deg); }
+            50% { transform: translate(-20px, 20px) rotate(-5deg); }
+            75% { transform: translate(20px, 10px) rotate(3deg); }
+        }
+
+        /* Grid pattern overlay */
+        .grid-overlay {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+        }
+
+        /* Main card */
+        .card-wrapper {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 580px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 36px 40px;
+            box-shadow: 
+                0 0 0 1px rgba(99, 102, 241, 0.1),
+                0 25px 50px -12px rgba(99, 102, 241, 0.15),
+                0 0 100px -20px rgba(99, 102, 241, 0.2);
+            animation: cardEntry 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--accent), var(--secondary));
+            border-radius: 24px 24px 0 0;
+        }
+
+        @keyframes cardEntry {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* Header section */
+        .app-header {
+            text-align: center;
+            margin-bottom: 24px;
+            animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .connection-visual {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .app-icon-wrapper {
+            position: relative;
+        }
+
+        .app-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            box-shadow: 0 10px 30px -5px var(--primary-glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-icon::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+        }
+
+        .powerschool-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #059669, #10b981);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: white;
+            box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .powerschool-icon::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+        }
+
+        .connection-line {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .connection-dot:nth-child(2) { animation-delay: 0.2s; }
+        .connection-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+
+        .verified-badge {
+            position: absolute;
+            bottom: -4px;
+            right: -4px;
+            width: 22px;
+            height: 22px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+        }
+
+        .app-name-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .app-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .verified-text {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: #059669;
+            font-weight: 600;
+            background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+            padding: 3px 8px;
+            border-radius: 12px;
+        }
+
+        .verified-text i {
+            font-size: 10px;
+        }
+
+        .app-desc {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .app-desc strong {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Permissions section */
+        .permissions {
+            margin-bottom: 20px;
+            animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+        }
+
+        .permissions-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .permissions-header h4 {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .permissions-header .badge {
+            font-size: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .permissions-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .permission-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
+
+        .permission-item:hover {
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+            transform: translateX(2px);
+            border-color: var(--primary);
+        }
+
+        .permission-icon-wrapper {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .permission-icon-wrapper.profile {
+            background: linear-gradient(135deg, #ddd6fe, #c4b5fd);
+            color: #7c3aed;
+        }
+
+        .permission-icon-wrapper.grades {
+            background: linear-gradient(135deg, #bbf7d0, #86efac);
+            color: #16a34a;
+        }
+
+        .permission-icon-wrapper.assignments {
+            background: linear-gradient(135deg, #fed7aa, #fdba74);
+            color: #ea580c;
+        }
+
+        .permission-icon-wrapper.schedule {
+            background: linear-gradient(135deg, #bae6fd, #7dd3fc);
+            color: #0284c7;
+        }
+
+        .permission-icon-wrapper.attendance {
+            background: linear-gradient(135deg, #fbcfe8, #f9a8d4);
+            color: #db2777;
+        }
+
+        .permission-icon-wrapper.default {
+            background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+            color: #475569;
+        }
+
+        .permission-content {
+            flex: 1;
+        }
+
+        .permission-text {
+            font-size: 13px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .permission-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .permission-check {
+            color: var(--success);
+            font-size: 12px;
+            margin-left: auto;
+        }
+
+        /* Error message */
+        .error {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            border: 1px solid #fecaca;
+            color: var(--error);
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            animation: shake 0.4s ease-in-out;
+        }
+
+        .error i { font-size: 16px; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+
+        /* Form styles */
+        form {
+            animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        label i {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 14px;
+            padding-left: 40px;
+            border-radius: 10px;
+            border: 2px solid var(--border);
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            background: white;
+            color: var(--text-primary);
+        }
+
+        input::placeholder {
+            color: var(--text-muted);
+        }
+
+        input:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-glow);
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 14px;
+            transition: color 0.2s;
+            pointer-events: none;
+        }
+
+        input:focus + .input-icon,
+        input:focus ~ .input-icon {
+            color: var(--primary);
+        }
+
+        .hint {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            padding-left: 4px;
+        }
+
+        .hint i { font-size: 11px; }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        /* Buttons */
+        .buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            text-align: center;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 4px 15px -3px var(--primary-glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px -5px var(--primary-glow);
+        }
+
+        .btn-primary:hover::before { opacity: 1; }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: var(--text-secondary);
+            border: 2px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+            border-color: rgba(99, 102, 241, 0.2);
+            color: var(--text-primary);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
+        }
+
+        .security-badges {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 10px;
+        }
+
+        .security-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .security-badge i {
+            color: var(--success);
+            font-size: 12px;
+        }
+
+        .footer p {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .footer a:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        /* Loading state */
+        .btn.loading {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .btn.loading .btn-text { opacity: 0; }
+
+        .btn.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            body { padding: 16px; }
+            .card { padding: 24px 20px; border-radius: 20px; }
+            .card-wrapper { max-width: 100%; }
+            .app-icon, .powerschool-icon { width: 48px; height: 48px; font-size: 20px; }
+            .app-name { font-size: 18px; }
+            .buttons { flex-direction: column-reverse; }
+            .connection-visual { gap: 12px; }
+            .permissions-list { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; gap: 0; }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    <div class="floating-orb orb-1"></div>
+    <div class="floating-orb orb-2"></div>
+    <div class="floating-orb orb-3"></div>
+    <div class="grid-overlay"></div>
+
+    <div class="card-wrapper">
+        <div class="card">
+            <div class="app-header">
+                <div class="connection-visual">
+                    <div class="app-icon-wrapper">
+                        <div class="app-icon">
+                            <i class="fas fa-cube"></i>
+                        </div>
+                        {% if app.verified %}
+                        <div class="verified-badge" title="Verified App">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="connection-line">
+                        <div class="connection-dot"></div>
+                        <div class="connection-dot"></div>
+                        <div class="connection-dot"></div>
+                    </div>
+                    <div class="powerschool-icon">
+                        <i class="fas fa-{% if is_teacher %}chalkboard-teacher{% else %}graduation-cap{% endif %}"></i>
+                    </div>
+                </div>
+                <div class="app-name-row">
+                    <span class="app-name">{{ app.name }}</span>
+                    {% if app.verified %}
+                    <span class="verified-text"><i class="fas fa-check-circle"></i> Verified</span>
+                    {% endif %}
+                </div>
+                <div class="app-desc">wants to connect to your <strong>{% if is_teacher %}PowerTeacher{% else %}PowerSchool{% endif %}</strong> account</div>
+            </div>
+            
+            {% if not app.hide_permissions %}
+            <div class="permissions">
+                <div class="permissions-header">
+                    <h4>Requested Access</h4>
+                    <span class="badge">{{ scopes|length }} permission{{ 's' if scopes|length != 1 else '' }}</span>
+                </div>
+                <div class="permissions-list">
+                {% for scope in scopes %}
+                <div class="permission-item">
+                    <div class="permission-icon-wrapper {% if scope == 'profile' %}profile{% elif scope == 'grades' %}grades{% elif scope == 'grades.assignments' %}assignments{% elif scope == 'schedule' %}schedule{% elif scope == 'attendance' %}attendance{% else %}default{% endif %}">
+                        {% if scope == 'profile' %}<i class="fas fa-user"></i>
+                        {% elif scope == 'grades' %}<i class="fas fa-chart-line"></i>
+                        {% elif scope == 'grades.assignments' %}<i class="fas fa-clipboard-list"></i>
+                        {% elif scope == 'schedule' %}<i class="fas fa-calendar-alt"></i>
+                        {% elif scope == 'attendance' %}<i class="fas fa-calendar-check"></i>
+                        {% else %}<i class="fas fa-lock"></i>{% endif %}
+                    </div>
+                    <div class="permission-content">
+                        <div class="permission-text">{{ scope_descriptions.get(scope, scope) }}</div>
+                    </div>
+                    <span class="permission-check"><i class="fas fa-check-circle"></i></span>
+                </div>
+                {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if error %}
+            <div class="error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+            
+            <form method="POST" id="authForm">
+                <input type="hidden" name="action" value="approve">
+                
+                <div class="form-group">
+                    <label><i class="fas fa-school"></i> District URL</label>
+                    <div class="input-wrapper">
+                        <input type="text" name="district_url" required placeholder="yourschool.powerschool.com">
+                        <i class="fas fa-globe input-icon"></i>
+                    </div>
+                    <p class="hint"><i class="fas fa-info-circle"></i> Enter your school's PowerSchool domain</p>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label><i class="fas fa-{% if is_teacher %}chalkboard-teacher{% else %}user{% endif %}"></i> {% if is_teacher %}Teacher Username{% else %}Username{% endif %}</label>
+                        <div class="input-wrapper">
+                            <input type="text" name="username" required placeholder="{% if is_teacher %}PowerTeacher username{% else %}Username{% endif %}" autocomplete="username">
+                            <i class="fas fa-at input-icon"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-key"></i> Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" name="password" required placeholder="Password" autocomplete="current-password">
+                            <i class="fas fa-lock input-icon"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="buttons">
+                    <button type="submit" name="action" value="deny" class="btn btn-secondary">
+                        <i class="fas fa-times"></i>
+                        <span>Cancel</span>
+                    </button>
+                    <button type="submit" name="action" value="approve" class="btn btn-primary" id="submitBtn">
+                        <i class="fas fa-link"></i>
+                        <span class="btn-text">Connect Account</span>
+                    </button>
+                </div>
+            </form>
+            
+            <div class="footer">
+                <div class="security-badges">
+                    <span class="security-badge"><i class="fas fa-shield-alt"></i> Encrypted</span>
+                    <span class="security-badge"><i class="fas fa-lock"></i> Secure</span>
+                    <span class="security-badge"><i class="fas fa-check-circle"></i> Private</span>
+                </div>
+                <p>Your credentials are encrypted and stored securely.<br>
+                <a href="/docs">Learn more about data security & permissions</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add loading state on form submit
+        document.getElementById('authForm').addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('submitBtn');
+            if (e.submitter && e.submitter.value === 'approve') {
+                submitBtn.classList.add('loading');
+            }
+        });
+
+        // Subtle input focus animations
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.closest('.form-group').style.transform = 'scale(1.01)';
+                this.closest('.form-group').style.transition = 'transform 0.2s ease';
+            });
+            input.addEventListener('blur', function() {
+                this.closest('.form-group').style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>

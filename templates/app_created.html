@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Created - API Manager</title>
+    <link rel="stylesheet" href="/static/win95.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding-bottom: 32px; }
+        .success-window { width: 480px; }
+        .success-icon { text-align: center; margin-bottom: 16px; }
+        .success-icon i { font-size: 48px; color: #008000; }
+        .success-text { text-align: center; margin-bottom: 20px; }
+        .credential-box { margin-bottom: 12px; }
+        .credential-label { font-weight: bold; margin-bottom: 4px; font-size: 11px; }
+        .credential-value {
+            display: flex; gap: 4px; align-items: center;
+            background: #ffffcc; padding: 8px; border: 1px solid #808000;
+            font-family: 'Courier New', monospace; font-size: 11px;
+        }
+        .credential-value input { flex: 1; border: none; background: transparent; font-family: inherit; font-size: 11px; color: #000; }
+        .warning-box { background: #fff0f0; border: 2px solid #800000; padding: 10px; margin-bottom: 16px; font-size: 11px; }
+        .warning-box i { color: #800000; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+    </style>
+</head>
+<body>
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="win95-window" style="width: 280px;">
+            <div class="win95-title-bar">
+                <div class="win95-title"><i class="fas fa-check-circle"></i> Copied!</div>
+                <div class="win95-title-buttons"><button class="win95-title-btn" onclick="closeModal()">×</button></div>
+            </div>
+            <div class="win95-content" style="text-align: center;">
+                <p id="modalMessage" style="margin-bottom: 16px;"></p>
+                <button class="win95-btn win95-btn-primary" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="win95-window success-window">
+        <div class="win95-title-bar">
+            <div class="win95-title"><i class="fas fa-check-circle"></i> Application Created Successfully!</div>
+        </div>
+        <div class="win95-content">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="success-text">
+                <strong>{{ app.name }}</strong> has been created successfully.
+            </div>
+            
+            <div class="warning-box">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Important:</strong> Copy your Client Secret now. You won't be able to see it again after leaving this page!
+            </div>
+            
+            <div class="credential-box">
+                <div class="credential-label"><i class="fas fa-id-card"></i> Client ID:</div>
+                <div class="credential-value">
+                    <input type="text" value="{{ app_id }}" readonly id="clientId">
+                    <button class="win95-btn" onclick="copyText('clientId', 'Client ID')"><i class="fas fa-copy"></i></button>
+                </div>
+            </div>
+            
+            <div class="credential-box">
+                <div class="credential-label"><i class="fas fa-key"></i> Client Secret:</div>
+                <div class="credential-value">
+                    <input type="text" value="{{ app.client_secret }}" readonly id="clientSecret">
+                    <button class="win95-btn" onclick="copyText('clientSecret', 'Client Secret')"><i class="fas fa-copy"></i></button>
+                </div>
+            </div>
+            
+            <div class="win95-dialog-buttons" style="margin-top: 20px;">
+                <button class="win95-btn" onclick="copyBoth()"><i class="fas fa-copy"></i> Copy Both</button>
+                <button class="win95-btn win95-btn-primary" onclick="location.href='/developer/dashboard'">
+                    <i class="fas fa-home"></i> Go to Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="win95-taskbar">
+        <button class="win95-start-btn"><i class="fas fa-windows" style="color: #ff0000;"></i> Start</button>
+        <div class="win95-taskbar-items">
+            <div class="win95-taskbar-item" onclick="location.href='/developer/dashboard'"><i class="fas fa-server"></i> Dashboard</div>
+        </div>
+        <div class="win95-systray"><i class="fas fa-volume-up"></i> <span id="clock"></span></div>
+    </div>
+    
+    <script>
+        function copyText(fieldId, label) {
+            const field = document.getElementById(fieldId);
+            navigator.clipboard.writeText(field.value).then(() => {
+                showModal(label + ' copied to clipboard!');
+            });
+        }
+        
+        function copyBoth() {
+            const clientId = document.getElementById('clientId').value;
+            const clientSecret = document.getElementById('clientSecret').value;
+            const text = 'Client ID: ' + clientId + '\nClient Secret: ' + clientSecret;
+            navigator.clipboard.writeText(text).then(() => {
+                showModal('Both credentials copied to clipboard!');
+            });
+        }
+        
+        function showModal(message) {
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+        
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>

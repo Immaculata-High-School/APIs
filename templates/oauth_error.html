@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - PowerSchool API</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif; background: #f8fafc;
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        }
+        .card {
+            background: white; border-radius: 12px; padding: 40px;
+            max-width: 400px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        .error-icon {
+            width: 56px; height: 56px; background: #fee2e2; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; margin: 0 auto 20px; color: #dc2626;
+        }
+        h1 { font-size: 20px; margin-bottom: 8px; color: #0f172a; }
+        p { color: #64748b; margin-bottom: 24px; font-size: 14px; }
+        a {
+            display: inline-block; padding: 10px 20px; background: #f1f5f9;
+            color: #374151; text-decoration: none; border-radius: 6px; font-size: 14px;
+        }
+        a:hover { background: #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="error-icon">✕</div>
+        <h1>Authorization Error</h1>
+        <p>{{ error }}</p>
+        <a href="/">Return Home</a>
+    </div>
+</body>
+</html>

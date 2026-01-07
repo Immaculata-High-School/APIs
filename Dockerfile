@@ -28,12 +28,18 @@ COPY . .
 # Create static and templates directories if they don't exist
 RUN mkdir -p static templates
 
+# Create data directory for SQLite persistence
+RUN mkdir -p /data
+
 # Expose port
 EXPOSE 5000
 
 # Environment variables
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
+
+# Volume for SQLite database persistence (when not using PostgreSQL)
+VOLUME ["/data"]
 
 # Run with gunicorn for production
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--threads", "2", "app:app"]

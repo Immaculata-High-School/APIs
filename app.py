@@ -46,6 +46,9 @@ database_url = os.environ.get('DATABASE_URL')
 # Fix postgres:// to postgresql:// for SQLAlchemy compatibility
 if database_url and database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
+# Fallback to SQLite if no DATABASE_URL is set
+if not database_url:
+    database_url = 'sqlite:///api_manager.db'
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {

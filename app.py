@@ -2062,6 +2062,7 @@ def teacher_oauth_authorize():
             district_url=result['district_url'],
             teacher_info=result['teacher_info'],
             sections=result.get('sections', []),
+            categories=result.get('categories', []),
             expires_at=time.time() + 1800,
             encrypted_username=encrypt_credential(username),
             encrypted_password=encrypt_credential(password)
@@ -2720,6 +2721,24 @@ def api_teacher_categories():
     """Get assignment categories"""
     categories = request.session_data.get('categories', [])
     
+    # If categories are empty, try to fetch from API
+    if not categories:
+        try:
+            response = teacher_make_request(
+                request.session_data, 'GET', '/ws/xte/batch/default_resources'
+            )
+            if response and response.status_code == 200:
+                resources = response.json()
+                categories = resources.get('teacherCategories', [])
+                # Update session record if we fetched new categories
+                if categories:
+                    session_record = TeacherSession.query.get(request.token_data['session_token'])
+                    if session_record:
+                        session_record.categories = categories
+                        db.session.commit()
+        except:
+            pass
+    
     result = []
     for cat in categories:
         if cat.get('isactive', True):
@@ -2733,6 +2752,51 @@ def api_teacher_categories():
             })
     
     return jsonify({'categories': result, 'count': len(result)})
+
+@app.route('/api/v1/teacher/session/refresh', methods=['POST'])
+@require_teacher_token
+@require_teacher_scope('teacher.profile')
+def api_teacher_refresh_session():
+    """Refresh teacher session data (categories, sections) from PowerSchool"""
+    try:
+        response = teacher_make_request(
+            request.session_data, 'GET', '/ws/xte/batch/default_resources'
+        )
+        if response and response.status_code == 200:
+            resources = response.json()
+            categories = resources.get('teacherCategories', [])
+            
+            # Extract sections from years data
+            sections = []
+            years = resources.get('years', [])
+            for year in years:
+                if year.get('defaultyear'):
+                    terms = year.get('terms', [])
+                    for term in terms:
+                        schedule = term.get('schedule', {})
+                        term_sections = schedule.get('_sections', [])
+                        if term_sections:
+                            sections = term_sections
+                            break
+                    break
+            
+            # Update session record
+            session_record = TeacherSession.query.get(request.token_data['session_token'])
+            if session_record:
+                session_record.categories = categories
+                session_record.sections = sections
+                db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'categories_count': len(categories),
+                    'sections_count': len(sections),
+                    'message': 'Session data refreshed successfully'
+                })
+        
+        return jsonify({'error': 'Failed to fetch session data from PowerSchool'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/v1/teacher/classes/<int:section_id>/students/<int:student_id>')
 @require_teacher_token

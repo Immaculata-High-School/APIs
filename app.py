@@ -235,6 +235,18 @@ def hash_password(password):
 def generate_token(prefix=''):
     return f"{prefix}{secrets.token_urlsafe(32)}"
 
+def get_current_term():
+    """Get the current grading term based on date"""
+    month = datetime.utcnow().month
+    if month >= 9 and month <= 10:  # Sept-Oct
+        return 'Q1'
+    elif month >= 11 or month == 12:  # Nov-Dec
+        return 'Q2'
+    elif month >= 1 and month <= 3:  # Jan-Mar
+        return 'Q3'
+    else:  # Apr-Jun
+        return 'Q4'
+
 def cleanup_expired():
     """Remove expired tokens and sessions from database"""
     now = time.time()
@@ -2320,7 +2332,7 @@ def api_course_detail(course_id):
 @require_scope('grades.assignments')
 def api_course_assignments(course_id):
     """Get assignments for a specific course"""
-    term = request.args.get('term', 'Q2')
+    term = request.args.get('term', get_current_term())
     
     # First fetch grades to get the score link
     grades_data = fetch_grades(request.session_data)
@@ -2401,7 +2413,7 @@ def api_course_assignments(course_id):
 @require_scope('grades.assignments')
 def api_all_assignments():
     """Get recent assignments across all courses"""
-    term = request.args.get('term', 'Q2')
+    term = request.args.get('term', get_current_term())
     limit = min(int(request.args.get('limit', 50)), 100)
     
     grades_data = fetch_grades(request.session_data)
@@ -2611,7 +2623,7 @@ def api_teacher_class_students(section_id):
 @require_teacher_scope('teacher.assignments')
 def api_teacher_class_assignments(section_id):
     """Get assignments for a specific class"""
-    store_code = request.args.get('term', 'Q2')
+    store_code = request.args.get('term', get_current_term())
     
     assignments_data = teacher_fetch_assignments(request.session_data, [section_id], store_code)
     
@@ -2667,7 +2679,22 @@ def api_teacher_create_assignment(section_id):
     if error:
         return jsonify({'error': error}), 500
     
-    return jsonify({'success': True, 'assignment': result})
+    # Extract assignment ID from result
+    assignment_id = None
+    if result:
+        assignment_id = result.get('assignmentid') or result.get('_id')
+        # Check nested structure if not at top level
+        if not assignment_id and result.get('_assignmentsections'):
+            for section in result.get('_assignmentsections', []):
+                assignment_id = section.get('assignmentid') or section.get('_assignmentid')
+                if assignment_id:
+                    break
+    
+    return jsonify({
+        'success': True, 
+        'assignment_id': assignment_id,
+        'assignment': result
+    })
 
 @app.route('/api/v1/teacher/assignments/<int:assignment_id>', methods=['DELETE'])
 @require_teacher_token
@@ -2685,7 +2712,7 @@ def api_teacher_delete_assignment(assignment_id):
 @require_teacher_scope('teacher.grades')
 def api_teacher_class_grades(section_id):
     """Get grades for all students in a class"""
-    store_code = request.args.get('term', 'Q2')
+    store_code = request.args.get('term', get_current_term())
     
     # First get students
     students = teacher_fetch_students(request.session_data, [section_id])
@@ -2937,7 +2964,7 @@ def api_teacher_scoring_metadata(section_id):
         'X-Requested-With': 'XMLHttpRequest',
     })
     
-    store_code = request.args.get('term', 'Q2')
+    store_code = request.args.get('term', get_current_term())
     
     try:
         response = s.get(
@@ -3079,7 +3106,7 @@ def api_teacher_student_full_schedule(student_id):
 @require_teacher_scope('teacher.grades')
 def api_teacher_student_all_grades(student_id):
     """Get grades for ALL classes in a student's schedule (not just your classes)"""
-    store_code = request.args.get('term', 'Q2')
+    store_code = request.args.get('term', get_current_term())
     
     grades = teacher_fetch_student_grades_all_classes(request.session_data, student_id, store_code)
     
@@ -3146,14 +3173,19 @@ def api_teacher_update_score():
     if not all([student_id, assignment_id, section_id]):
         return jsonify({'error': 'Missing required fields: student_id, assignment_id, section_id'}), 400
     
-    # Fetch assignment to get assignment_section_id
-    assignments = teacher_fetch_assignments(request.session_data, [section_id])
+    # Fetch assignment to get assignment_section_id - try multiple terms
+    terms_to_try = ['Q3', 'Q2', 'Q1', 'Q4', 'S1', 'S2']
     assignment_section_id = None
-    for a in assignments:
-        if a.get('assignmentid') == int(assignment_id):
-            for section in a.get('_assignmentsections', []):
-                assignment_section_id = section.get('assignmentsectionid')
+    
+    for term in terms_to_try:
+        assignments = teacher_fetch_assignments(request.session_data, [section_id], term)
+        for a in assignments:
+            if a.get('assignmentid') == int(assignment_id):
+                for section in a.get('_assignmentsections', []):
+                    assignment_section_id = section.get('assignmentsectionid')
+                    break
                 break
+        if assignment_section_id:
             break
     
     if not assignment_section_id:
@@ -3244,14 +3276,19 @@ def api_teacher_update_scores_batch():
     if not isinstance(scores_list, list) or len(scores_list) == 0:
         return jsonify({'error': 'scores must be a non-empty array'}), 400
     
-    # Get assignment_section_id
-    assignments = teacher_fetch_assignments(request.session_data, [section_id])
+    # Get assignment_section_id - try multiple terms
+    terms_to_try = ['Q3', 'Q2', 'Q1', 'Q4', 'S1', 'S2']
     assignment_section_id = None
-    for a in assignments:
-        if a.get('assignmentid') == int(assignment_id):
-            for section in a.get('_assignmentsections', []):
-                assignment_section_id = section.get('assignmentsectionid')
+    
+    for term in terms_to_try:
+        assignments = teacher_fetch_assignments(request.session_data, [section_id], term)
+        for a in assignments:
+            if a.get('assignmentid') == int(assignment_id):
+                for section in a.get('_assignmentsections', []):
+                    assignment_section_id = section.get('assignmentsectionid')
+                    break
                 break
+        if assignment_section_id:
             break
     
     if not assignment_section_id:
@@ -3468,7 +3505,7 @@ def api_teacher_get_assignment_scores(assignment_id):
 def api_teacher_get_student_scores(student_id):
     """Get all scores for a specific student in a class"""
     section_id = request.args.get('section_id')
-    store_code = request.args.get('term', 'Q2')
+    store_code = request.args.get('term', get_current_term())
     
     if not section_id:
         return jsonify({'error': 'section_id query parameter required'}), 400
